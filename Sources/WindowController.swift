@@ -54,9 +54,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         tableView = NSTableView()
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Title"))
         column.title = "History"
-        column.width = historyPanelWidth - 20
         column.isEditable = false
         tableView.addTableColumn(column)
+        tableView.headerView = nil
         tableView.dataSource = self
         tableView.delegate = self
         tableView.allowsMultipleSelection = false
@@ -69,6 +69,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         scrollView.autoresizingMask = [.width, .height]
         leftView.addSubview(scrollView)
         scrollView.frame = leftView.bounds
+
+        // Hide table header to remove column resize handle
+        tableView.headerView = nil
 
         // Right: Player
         let rightView = NSView()
@@ -195,7 +198,10 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
     }
 
     func saveWindowFrame() {
-        guard let frame = window?.frame else { return }
+        guard let frame = window?.frame else {
+            print("saveWindowFrame: No window frame to save")
+            return
+        }
         let frameDict: [String: CGFloat] = [
             "x": frame.origin.x,
             "y": frame.origin.y,
@@ -203,28 +209,33 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             "height": frame.size.height
         ]
         UserDefaults.standard.set(frameDict, forKey: "com.youtube.mini.windowFrame")
-        print("Saved window frame: \(frame)")
+        print("✅ Saved window frame: \(frame)")
     }
 
     func restoreWindowFrame() {
-        guard let frameDict = UserDefaults.standard.dictionary(forKey: "com.youtube.mini.windowFrame") as? [String: CGFloat],
-              let x = frameDict["x"],
+        guard let frameDict = UserDefaults.standard.dictionary(forKey: "com.youtube.mini.windowFrame") as? [String: CGFloat] else {
+            print("❌ No saved window frame dictionary found")
+            return
+        }
+
+        guard let x = frameDict["x"],
               let y = frameDict["y"],
               let width = frameDict["width"],
               let height = frameDict["height"] else {
-            print("No saved window frame, using default")
+            print("❌ Invalid frame dictionary: \(frameDict)")
             return
         }
 
         let frame = NSRect(x: x, y: y, width: width, height: height)
+        print("📐 Attempting to restore frame: \(frame)")
 
         // Validate frame is on an active screen
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(frame.origin) }),
            screen.frame.intersects(frame) {
             window?.setFrame(frame, display: true, animate: false)
-            print("Restored window frame: \(frame)")
+            print("✅ Restored window frame: \(frame)")
         } else {
-            print("Saved frame is off-screen, using default")
+            print("⚠️ Saved frame is off-screen or invalid, using default")
         }
     }
 
