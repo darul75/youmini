@@ -84,6 +84,36 @@ class ChromeHelper {
         }
     }
     
+    static func getActiveTabInfo() -> (url: String, title: String)? {
+        let script = """
+        tell application "Google Chrome"
+            if not running then return ""
+            try
+                set activeTab to active tab of front window
+                return {URL of activeTab, title of activeTab}
+            on error
+                return ""
+            end try
+        end tell
+        """
+
+        guard let appleScript = NSAppleScript(source: script) else { return nil }
+        var error: NSDictionary?
+        let result = appleScript.executeAndReturnError(&error)
+
+        if let error = error {
+            print("AppleScript error: \(error)")
+            return nil
+        }
+
+        guard let resultString = result.stringValue, !resultString.isEmpty else { return nil }
+        let parts = resultString.components(separatedBy: ", ")
+        if parts.count >= 2 {
+            return (url: parts[0], title: parts[1])
+        }
+        return nil
+    }
+
     static func getActiveTabURL() -> String? {
         let script = """
         tell application "Google Chrome"

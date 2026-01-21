@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:youtube-mini}",
+            "name": "Debug youtube-mini",
+            "target": "youtube-mini",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug youtube-mini"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:youtube-mini}",
+            "name": "Release youtube-mini",
+            "target": "youtube-mini",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release youtube-mini"
+        }
+    ]
+}

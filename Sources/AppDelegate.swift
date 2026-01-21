@@ -4,6 +4,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var windowController: WindowController?
     var autoPlayTimer: Timer?
+    var playedHistory: [(url: String, title: String)] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status item
@@ -47,6 +48,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    @MainActor func addToHistory(url: String, title: String) {
+        // Remove if already exists
+        playedHistory.removeAll { $0.url == url }
+        // Add to front
+        playedHistory.insert((url, title), at: 0)
+        // Limit to 20
+        if playedHistory.count > 20 {
+            playedHistory = Array(playedHistory.prefix(20))
+        }
+        // Reload table
+        windowController?.tableView?.reloadData()
+    }
+
     @MainActor @objc func playYouTubeTab(_ sender: NSMenuItem) {
         if let url = sender.representedObject as? String {
             // Start the video in Chrome if paused
@@ -67,18 +81,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     @MainActor func checkForAutoPlay() {
-        guard let activeURL = ChromeHelper.getActiveTabURL(),
-              activeURL.contains("youtube.com/watch"),
-              activeURL != windowController?.currentURL else { return }
-        
+        guard let info = ChromeHelper.getActiveTabInfo(),
+              info.url.contains("youtube.com/watch"),
+              info.url != windowController?.currentURL else { return }
+
+        // Add to history
+        addToHistory(url: info.url, title: info.title)
+
         // Check if video is paused in Chrome, if yes, start it
-        if let paused = ChromeHelper.isVideoPaused(url: activeURL), paused {
-            ChromeHelper.playVideoInChrome(url: activeURL)
+        if let paused = ChromeHelper.isVideoPaused(url: info.url), paused {
+            ChromeHelper.playVideoInChrome(url: info.url)
         }
-        
+
         // Auto-play in mini app
         windowController?.showWindow(nil)
-        windowController?.playYouTubeURL(activeURL)
+        windowController?.playYouTubeURL(info.url)
     }
     
     func menuNeedsUpdate(_ menu: NSMenu) {
