@@ -64,6 +64,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
                 miniViewItem.title = "Split View"
             }
+            // Apply the MiniView mode to the window
+            windowController?.toggleMiniView(true)
         }
 
         // Then populate history with existing YouTube tabs

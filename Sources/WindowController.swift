@@ -201,10 +201,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             // Store current window frame for restoration
             originalWindowFrame = window?.frame
 
-            // Remove title bar completely for true MiniView
+            // Remove title bar completely for true MiniView but keep resizable
             window?.styleMask.remove(.titled)
             window?.styleMask.remove(.closable)
-            window?.styleMask.remove(.resizable)
             window?.titleVisibility = .hidden
             if #available(macOS 11.0, *) {
                 window?.titlebarSeparatorStyle = .none
@@ -213,7 +212,7 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             // Replace entire content view with player
             replaceContentWithPlayer()
         } else {
-            // Restore title bar
+            // Restore title bar and controls
             window?.styleMask.insert(.titled)
             window?.styleMask.insert(.closable)
             window?.styleMask.insert(.resizable)
