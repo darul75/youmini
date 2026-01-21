@@ -132,11 +132,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 
     func startAutoPlayTimer() {
-        autoPlayTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.checkForAutoPlay()
-            }
-        }
+        autoPlayTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
+    }
+
+    @objc @MainActor private func timerFired() {
+        checkForAutoPlay()
     }
     
     @MainActor func checkForAutoPlay() {

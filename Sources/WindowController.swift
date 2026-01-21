@@ -296,11 +296,7 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
                         }
                     }
 
-                    if let nsError = error as? NSError {
-                        print("Error domain: \(nsError.domain)")
-                        print("Error code: \(nsError.code)")
-                        print("Error userInfo: \(nsError.userInfo)")
-                    }
+
                     spinner.stopAnimation(nil)
                     spinner.isHidden = true
                 }

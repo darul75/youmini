@@ -119,7 +119,6 @@ class ChromeHelper {
         }
         print("Failed to parse result: \(parts)")
         return nil
-        return nil
     }
 
     static func getActiveTabURL() -> String? {
