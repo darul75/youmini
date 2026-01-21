@@ -49,7 +49,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Create window controller
         windowController = WindowController()
 
-        // Populate history with existing YouTube tabs
+        // Load persisted history first
+        loadPersistedHistory()
+
+        // Then populate history with existing YouTube tabs
         let tabs = ChromeHelper.getYouTubeTabs()
         for tab in tabs {
             addToHistory(url: tab.url, title: tab.title)
@@ -101,6 +104,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             currentPlayingIndex = 0
         }
 
+        // Save history to UserDefaults
+        saveHistory()
+
         // Fetch real title asynchronously
         Task { @MainActor in
             do {
@@ -113,6 +119,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     if let index = playedHistory.firstIndex(where: { $0.url == url }) {
                         playedHistory[index] = (url, realTitle)
                         windowController?.tableView?.reloadData()
+                        // Save updated history
+                        saveHistory()
                     }
                 }
             } catch {
@@ -121,11 +129,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    private func saveHistory() {
+        let historyData = playedHistory.map { ["url": $0.url, "title": $0.title] }
+        UserDefaults.standard.set(historyData, forKey: "com.youtube.mini.history")
+        UserDefaults.standard.set(currentPlayingIndex, forKey: "com.youtube.mini.currentIndex")
+        print("Saved history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
+    }
+
+    @MainActor private func loadPersistedHistory() {
+        guard let historyData = UserDefaults.standard.array(forKey: "com.youtube.mini.history") as? [[String: String]],
+              !historyData.isEmpty else {
+            print("No persisted history found (first launch)")
+            return
+        }
+
+        playedHistory = historyData.compactMap { dict -> (url: String, title: String)? in
+            guard let url = dict["url"], let title = dict["title"] else {
+                print("Invalid history item: \(dict)")
+                return nil
+            }
+            return (url, title)
+        }
+
+        currentPlayingIndex = UserDefaults.standard.integer(forKey: "com.youtube.mini.currentIndex")
+        if let index = currentPlayingIndex, index >= playedHistory.count {
+            currentPlayingIndex = nil
+            print("Current index \(index) out of bounds, resetting to nil")
+        }
+
+        print("Loaded persisted history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
+        windowController?.tableView?.reloadData()
+    }
+
     @MainActor func playNextVideo() {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
             windowController?.tableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[index + 1].url)
+            saveHistory()
         }
     }
 
