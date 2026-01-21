@@ -79,6 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @MainActor @objc func toggleWindow() {
         if let wc = windowController {
             if wc.window?.isVisible == true {
+                wc.stopPlayback()  // Stop video before hiding window
                 wc.close()
             } else {
                 wc.showWindow(nil)

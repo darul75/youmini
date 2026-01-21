@@ -182,6 +182,15 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         (NSApp.delegate as? AppDelegate)?.playNextVideo()
     }
 
+    func stopPlayback() {
+        player?.pause()
+        player = nil
+        playerView.player = nil
+        // Remove any existing observers
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        print("Video playback stopped")
+    }
+
     func playYouTubeURL(_ urlString: String) {
         print("playYouTubeURL called with: \(urlString)")
         currentURL = urlString
