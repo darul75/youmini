@@ -1,6 +1,6 @@
 import AppKit
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var windowController: WindowController?
 
@@ -17,23 +17,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         openItem.target = self
         menu.addItem(openItem)
 
-        // Add Play Chrome YouTube submenu
+        // Add Play Chrome YouTube submenu (will be updated dynamically)
         let playItem = NSMenuItem(title: "Play Chrome YouTube", action: nil, keyEquivalent: "")
-        let submenu = NSMenu()
-        let tabs = ChromeHelper.getYouTubeTabs()
-        if tabs.isEmpty {
-            let noTabsItem = NSMenuItem(title: "No YouTube tabs found", action: nil, keyEquivalent: "")
-            noTabsItem.isEnabled = false
-            submenu.addItem(noTabsItem)
-        } else {
-            for tab in tabs {
-                let item = NSMenuItem(title: tab.title, action: #selector(playYouTubeTab(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = tab.url
-                submenu.addItem(item)
-            }
-        }
-        playItem.submenu = submenu
         menu.addItem(playItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -41,6 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         quitItem.target = self
         menu.addItem(quitItem)
 
+        menu.delegate = self
         statusItem.menu = menu
 
         // Create window controller
@@ -65,6 +51,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             windowController?.showWindow(nil)
             windowController?.playYouTubeURL(url)
+        }
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        // Update the Play Chrome YouTube submenu dynamically
+        if let playItem = menu.items.first(where: { $0.title == "Play Chrome YouTube" }) {
+            let submenu = NSMenu()
+            let tabs = ChromeHelper.getYouTubeTabs()
+            if tabs.isEmpty {
+                let noTabsItem = NSMenuItem(title: "No YouTube tabs found", action: nil, keyEquivalent: "")
+                noTabsItem.isEnabled = false
+                submenu.addItem(noTabsItem)
+            } else {
+                for tab in tabs {
+                    let item = NSMenuItem(title: tab.title, action: #selector(playYouTubeTab(_:)), keyEquivalent: "")
+                    item.target = self
+                    item.representedObject = tab.url
+                    submenu.addItem(item)
+                }
+            }
+            playItem.submenu = submenu
         }
     }
 
