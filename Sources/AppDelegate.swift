@@ -5,6 +5,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var windowController: WindowController?
     var autoPlayTimer: Timer?
     var playedHistory: [(url: String, title: String)] = []
+    var currentPlayingIndex: Int?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status item
@@ -36,6 +37,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             addToHistory(url: tab.url, title: tab.title)
         }
 
+        windowController?.showWindow(nil)
+
+        // Set initial menu title to Hide Window since window is shown
+        if let openItem = menu.items.first(where: { $0.action == #selector(toggleWindow) }) {
+            openItem.title = "Hide Window"
+        }
+
+        // Auto-play if only one video in history
+        if playedHistory.count == 1 {
+            currentPlayingIndex = 0
+            windowController?.playYouTubeURL(playedHistory[0].url)
+        }
+
         // Start auto-play timer
         startAutoPlayTimer()
     }
@@ -53,15 +67,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @MainActor func addToHistory(url: String, title: String) {
         // Remove if already exists
         playedHistory.removeAll { $0.url == url }
-        // Add to front
-        playedHistory.insert((url, title), at: 0)
-        // Limit to 20
+        // Add to end
+        playedHistory.append((url, title))
+        // Limit to 20, remove oldest
         if playedHistory.count > 20 {
-            playedHistory = Array(playedHistory.prefix(20))
+            playedHistory.removeFirst()
         }
         print("Added to history: \(url) - \(title), total: \(playedHistory.count)")
         // Reload table
         windowController?.tableView?.reloadData()
+
+        // If this is the first video and no current playing, set index
+        if playedHistory.count == 1 && currentPlayingIndex == nil {
+            currentPlayingIndex = 0
+        }
+    }
+
+    @MainActor func playNextVideo() {
+        if let index = currentPlayingIndex, index + 1 < playedHistory.count {
+            currentPlayingIndex = index + 1
+            windowController?.playYouTubeURL(playedHistory[index + 1].url)
+        }
     }
 
 

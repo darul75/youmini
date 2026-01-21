@@ -101,6 +101,31 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         splitView.subviews[1].frame = NSRect(x: leftWidth + splitView.dividerThickness, y: 0, width: rightWidth, height: splitView.bounds.height)
     }
 
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let cellView = NSTableCellView()
+        cellView.textField = NSTextField()
+        cellView.textField?.isEditable = false
+        cellView.textField?.isBordered = false
+        cellView.textField?.backgroundColor = .clear
+        cellView.textField?.stringValue = (NSApp.delegate as? AppDelegate)?.playedHistory[row].title ?? ""
+        cellView.addSubview(cellView.textField!)
+        cellView.textField?.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cellView.textField!.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+            cellView.textField!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
+            cellView.textField!.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
+        ])
+
+        // Highlight current playing video
+        if row == (NSApp.delegate as? AppDelegate)?.currentPlayingIndex {
+            cellView.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+        } else {
+            cellView.layer?.backgroundColor = NSColor.clear.cgColor
+        }
+
+        return cellView
+    }
+
     func splitView(_ splitView: NSSplitView, resizeSubviewsWithOldSize oldSize: NSSize) {
         let dividerThickness = splitView.dividerThickness
         let totalWidth = splitView.bounds.width
@@ -142,12 +167,20 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         if let history = (NSApp.delegate as? AppDelegate)?.playedHistory,
            row >= 0 && row < history.count {
             let url = history[row].url
+            (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = row
             playYouTubeURL(url)
         }
     }
 
+    @objc func videoDidFinish() {
+        (NSApp.delegate as? AppDelegate)?.playNextVideo()
+    }
+
     func playYouTubeURL(_ urlString: String) {
+        print("playYouTubeURL called with: \(urlString)")
         currentURL = urlString
+        // Remove previous observer
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
             return
@@ -172,11 +205,15 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
                     let stream = hdStream ?? streams.filterVideoAndAudio()
                         .filter { $0.isNativelyPlayable }
                         .highestResolutionStream()
-                    if let stream {
-                        player = AVPlayer(url: stream.url)
-                        playerView.player = player
-                        player?.play()
-                    }
+                        if let stream {
+                            print("Stream URL: \(stream.url)")
+                            player = AVPlayer(url: stream.url)
+                            playerView.player = player
+                            // Add observer for end of video
+                            NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+                            player?.play()
+                            print("Started playing video")
+                        }
                     // Hide spinner
                     self.spinner.stopAnimation(nil)
                     self.spinner.isHidden = true
