@@ -19,10 +19,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         openItem.target = self
         menu.addItem(openItem)
 
-        // Add Play Chrome YouTube submenu (will be updated dynamically)
-        let playItem = NSMenuItem(title: "Play Chrome YouTube", action: nil, keyEquivalent: "")
-        menu.addItem(playItem)
-
         menu.addItem(NSMenuItem.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -68,16 +64,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         windowController?.tableView?.reloadData()
     }
 
-    @MainActor @objc func playYouTubeTab(_ sender: NSMenuItem) {
-        if let url = sender.representedObject as? String {
-            // Start the video in Chrome if paused
-            if let paused = ChromeHelper.isVideoPaused(url: url), paused {
-                ChromeHelper.playVideoInChrome(url: url)
-            }
-            windowController?.showWindow(nil)
-            windowController?.playYouTubeURL(url)
-        }
-    }
+
 
     func startAutoPlayTimer() {
         autoPlayTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
@@ -89,6 +76,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     @MainActor func checkForAutoPlay() {
         print("Checking for auto-play...")
+
+        // Sync history with detected YouTube tabs
+        let tabs = ChromeHelper.getYouTubeTabs()
+        for tab in tabs {
+            if !playedHistory.contains(where: { $0.url == tab.url }) {
+                print("Synced new tab to history: \(tab.url)")
+                addToHistory(url: tab.url, title: tab.title)
+            }
+        }
+
         guard let info = ChromeHelper.getActiveTabInfo(),
               info.url.contains("youtube.com/watch"),
               info.url != windowController?.currentURL else {
@@ -97,45 +94,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         print("Detected new YouTube URL: \(info.url)")
 
-        // Add to history
-        addToHistory(url: info.url, title: info.title)
-
+        // Add to history (already added above, but ensure)
+        
         // Check if video is paused in Chrome, if yes, start it
         if let paused = ChromeHelper.isVideoPaused(url: info.url), paused {
             ChromeHelper.playVideoInChrome(url: info.url)
         }
-
+        
         // Auto-play in mini app
         windowController?.showWindow(nil)
         windowController?.playYouTubeURL(info.url)
     }
     
     func menuNeedsUpdate(_ menu: NSMenu) {
-        // Update the Play Chrome YouTube submenu dynamically
-        if let playItem = menu.items.first(where: { $0.title == "Play Chrome YouTube" }) {
-            let submenu = NSMenu()
-            let tabs = ChromeHelper.getYouTubeTabs()
-            if tabs.isEmpty {
-                let noTabsItem = NSMenuItem(title: "No YouTube tabs found", action: nil, keyEquivalent: "")
-                noTabsItem.isEnabled = false
-                submenu.addItem(noTabsItem)
-            } else {
-                for tab in tabs {
-                    let item = NSMenuItem(title: tab.title, action: #selector(playYouTubeTab(_:)), keyEquivalent: "")
-                    item.target = self
-                    item.representedObject = tab.url
-                    submenu.addItem(item)
-                }
-            }
-            playItem.submenu = submenu
-        }
-
-        // Sync history with detected YouTube tabs
-        let tabs = ChromeHelper.getYouTubeTabs()
-        for tab in tabs {
-            if !playedHistory.contains(where: { $0.url == tab.url }) {
-                addToHistory(url: tab.url, title: tab.title)
-            }
+        // Update Show/Hide Window title
+        if let openItem = menu.items.first(where: { $0.action == #selector(toggleWindow) }) {
+            let isVisible = windowController?.window?.isVisible == true
+            openItem.title = isVisible ? "Hide Window" : "Show Window"
         }
     }
 
