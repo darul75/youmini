@@ -10,6 +10,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
     var player: AVPlayer?
     var currentURL: String?
     let historyPanelWidth: CGFloat = 200
+    var isMiniViewMode: Bool = false
+    var originalWindowFrame: NSRect?
+    var storedSplitView: NSSplitView?
 
 
 
@@ -189,6 +192,101 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         // Remove any existing observers
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         print("Video playback stopped")
+    }
+
+    func toggleMiniView(_ enabled: Bool) {
+        isMiniViewMode = enabled
+
+        if enabled {
+            // Store current window frame for restoration
+            originalWindowFrame = window?.frame
+
+            // Remove title bar completely for true MiniView
+            window?.styleMask.remove(.titled)
+            window?.styleMask.remove(.closable)
+            window?.styleMask.remove(.resizable)
+            window?.titleVisibility = .hidden
+            if #available(macOS 11.0, *) {
+                window?.titlebarSeparatorStyle = .none
+            }
+
+            // Replace entire content view with player
+            replaceContentWithPlayer()
+        } else {
+            // Restore title bar
+            window?.styleMask.insert(.titled)
+            window?.styleMask.insert(.closable)
+            window?.styleMask.insert(.resizable)
+            window?.titleVisibility = .visible
+
+            // Restore split view content
+            restoreSplitViewContent()
+        }
+    }
+
+    private func replaceContentWithPlayer() {
+        guard let contentView = window?.contentView else { return }
+
+        // Store current split view for restoration
+        storedSplitView = splitView
+
+        // Remove split view from content view
+        splitView.removeFromSuperview()
+
+        // Add player directly to content view
+        contentView.addSubview(playerView)
+
+        // Make player fill entire content view
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            playerView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            playerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            playerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        ])
+
+        // Force layout update
+        contentView.layoutSubtreeIfNeeded()
+    }
+
+    private func restoreSplitViewContent() {
+        guard let contentView = window?.contentView,
+              let storedSplitView = storedSplitView else { return }
+
+        // Remove player from content view
+        playerView.removeFromSuperview()
+
+        // Restore split view to content view
+        contentView.addSubview(storedSplitView)
+        splitView = storedSplitView
+
+        // Make split view fill content view
+        storedSplitView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            storedSplitView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            storedSplitView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            storedSplitView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            storedSplitView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        ])
+
+        // Restore player to its original position in split view
+        guard let rightView = splitView.arrangedSubviews.last else { return }
+        rightView.addSubview(playerView)
+
+        // Restore player constraints in right view
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            playerView.topAnchor.constraint(equalTo: rightView.topAnchor),
+            playerView.leadingAnchor.constraint(equalTo: rightView.leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: rightView.trailingAnchor),
+            playerView.bottomAnchor.constraint(equalTo: rightView.bottomAnchor)
+        ])
+
+        // Clear stored reference
+        self.storedSplitView = nil
+
+        // Force layout update
+        contentView.layoutSubtreeIfNeeded()
     }
 
     func playYouTubeURL(_ urlString: String) {

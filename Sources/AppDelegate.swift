@@ -4,6 +4,7 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var windowController: WindowController?
+    var isMiniViewMode: Bool = false
     var autoPlayTimer: Timer?
     var playedHistory: [(url: String, title: String)] = []
     var currentPlayingIndex: Int?
@@ -38,6 +39,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         openItem.target = self
         menu.addItem(openItem)
 
+        let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: "")
+        miniViewItem.target = self
+        menu.addItem(miniViewItem)
+
         menu.addItem(NSMenuItem.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -51,6 +56,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Load persisted history first
         loadPersistedHistory()
+
+        // Load MiniView mode
+        isMiniViewMode = UserDefaults.standard.bool(forKey: "com.youtube.mini.miniViewMode")
+        if isMiniViewMode {
+            // Update menu title for persisted mode
+            if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
+                miniViewItem.title = "Split View"
+            }
+        }
 
         // Then populate history with existing YouTube tabs
         let tabs = ChromeHelper.getYouTubeTabs()
@@ -78,6 +92,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor @objc func toggleWindow() {
         if let wc = windowController {
+            if isMiniViewMode {
+                // Exit MiniView first when hiding window
+                toggleMiniView()
+            }
+
             if wc.window?.isVisible == true {
                 wc.stopPlayback()  // Stop video before hiding window
                 wc.close()
@@ -85,6 +104,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 wc.showWindow(nil)
             }
         }
+    }
+
+    @MainActor @objc func toggleMiniView() {
+        isMiniViewMode.toggle()
+
+        // Update menu title
+        if let miniViewItem = statusItem.menu?.items.first(where: { $0.action == #selector(toggleMiniView) }) {
+            miniViewItem.title = isMiniViewMode ? "Split View" : "Mini View"
+        }
+
+        // Notify window controller
+        windowController?.toggleMiniView(isMiniViewMode)
+
+        // Persist mode
+        UserDefaults.standard.set(isMiniViewMode, forKey: "com.youtube.mini.miniViewMode")
+        print("MiniView mode \(isMiniViewMode ? "enabled" : "disabled")")
     }
 
     @MainActor func addToHistory(url: String, title: String) {
