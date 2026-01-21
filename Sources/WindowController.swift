@@ -128,7 +128,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        return (NSApp.delegate as? AppDelegate)?.playedHistory.count ?? 0
+        let count = (NSApp.delegate as? AppDelegate)?.playedHistory.count ?? 0
+        print("History count: \(count)")
+        return count
     }
 
     func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? {

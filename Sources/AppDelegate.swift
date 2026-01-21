@@ -33,7 +33,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Create window controller
         windowController = WindowController()
-        
+
+        // Populate history with existing YouTube tabs
+        let tabs = ChromeHelper.getYouTubeTabs()
+        for tab in tabs {
+            addToHistory(url: tab.url, title: tab.title)
+        }
+
         // Start auto-play timer
         startAutoPlayTimer()
     }
@@ -57,6 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if playedHistory.count > 20 {
             playedHistory = Array(playedHistory.prefix(20))
         }
+        print("Added to history: \(url) - \(title), total: \(playedHistory.count)")
         // Reload table
         windowController?.tableView?.reloadData()
     }
@@ -81,9 +88,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     @MainActor func checkForAutoPlay() {
+        print("Checking for auto-play...")
         guard let info = ChromeHelper.getActiveTabInfo(),
               info.url.contains("youtube.com/watch"),
-              info.url != windowController?.currentURL else { return }
+              info.url != windowController?.currentURL else {
+            print("No new YouTube URL detected")
+            return
+        }
+        print("Detected new YouTube URL: \(info.url)")
 
         // Add to history
         addToHistory(url: info.url, title: info.title)
@@ -116,6 +128,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
             playItem.submenu = submenu
+        }
+
+        // Sync history with detected YouTube tabs
+        let tabs = ChromeHelper.getYouTubeTabs()
+        for tab in tabs {
+            if !playedHistory.contains(where: { $0.url == tab.url }) {
+                addToHistory(url: tab.url, title: tab.title)
+            }
         }
     }
 

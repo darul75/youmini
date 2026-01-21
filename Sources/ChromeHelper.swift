@@ -106,11 +106,19 @@ class ChromeHelper {
             return nil
         }
 
-        guard let resultString = result.stringValue, !resultString.isEmpty else { return nil }
+        guard let resultString = result.stringValue, !resultString.isEmpty else {
+            print("No result string from AppleScript")
+            return nil
+        }
+        print("AppleScript result: \(resultString)")
         let parts = resultString.components(separatedBy: ", ")
         if parts.count >= 2 {
-            return (url: parts[0], title: parts[1])
+            let info = (url: parts[0], title: parts[1])
+            print("Active tab info: \(info)")
+            return info
         }
+        print("Failed to parse result: \(parts)")
+        return nil
         return nil
     }
 
