@@ -274,6 +274,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Cleanup
+        // Save window frame before app terminates
+        print("💾 App terminating, saving window frame...")
+        windowController?.saveWindowFrame()
     }
 }
