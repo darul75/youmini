@@ -7,7 +7,7 @@ let package = Package(
     name: "youtube-mini",
     platforms: [.macOS(.v10_15)],
     dependencies: [
-        .package(url: "https://github.com/alexeichhorn/YouTubeKit.git", from: "0.1.0"),
+        .package(url: "https://github.com/alexeichhorn/YouTubeKit.git", exact: "0.4.1"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
