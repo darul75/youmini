@@ -3,6 +3,7 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var windowController: WindowController?
+    var autoPlayTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status item
@@ -31,6 +32,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Create window controller
         windowController = WindowController()
+        
+        // Start auto-play timer
+        startAutoPlayTimer()
     }
 
     @MainActor @objc func toggleWindow() {
@@ -54,6 +58,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    func startAutoPlayTimer() {
+        autoPlayTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.checkForAutoPlay()
+            }
+        }
+    }
+    
+    @MainActor func checkForAutoPlay() {
+        guard let activeURL = ChromeHelper.getActiveTabURL(),
+              activeURL.contains("youtube.com/watch"),
+              activeURL != windowController?.currentURL else { return }
+        
+        // Check if video is paused in Chrome, if yes, start it
+        if let paused = ChromeHelper.isVideoPaused(url: activeURL), paused {
+            ChromeHelper.playVideoInChrome(url: activeURL)
+        }
+        
+        // Auto-play in mini app
+        windowController?.showWindow(nil)
+        windowController?.playYouTubeURL(activeURL)
+    }
+    
     func menuNeedsUpdate(_ menu: NSMenu) {
         // Update the Play Chrome YouTube submenu dynamically
         if let playItem = menu.items.first(where: { $0.title == "Play Chrome YouTube" }) {

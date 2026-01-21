@@ -6,6 +6,7 @@ class WindowController: NSWindowController {
     var playerView: AVPlayerView!
     var spinner: NSProgressIndicator!
     var player: AVPlayer?
+    var currentURL: String?
 
 
 
@@ -63,6 +64,7 @@ class WindowController: NSWindowController {
     }
 
     func playYouTubeURL(_ urlString: String) {
+        currentURL = urlString
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
             return
