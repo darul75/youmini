@@ -1,4 +1,5 @@
 import AppKit
+@preconcurrency import YouTubeKit
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
@@ -98,6 +99,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // If this is the first video and no current playing, set index
         if playedHistory.count == 1 && currentPlayingIndex == nil {
             currentPlayingIndex = 0
+        }
+
+        // Fetch real title asynchronously
+        Task { @MainActor in
+            do {
+                print("Fetching real title for URL: \(url)")
+                let youTube = YouTube(url: URL(string: url)!)
+                let metadata = try await youTube.metadata
+                if let realTitle = metadata?.title, realTitle != title {
+                    print("Updating title from '\(title)' to '\(realTitle)'")
+                    // Update the existing entry
+                    if let index = playedHistory.firstIndex(where: { $0.url == url }) {
+                        playedHistory[index] = (url, realTitle)
+                        windowController?.tableView?.reloadData()
+                    }
+                }
+            } catch {
+                print("Failed to fetch metadata for \(url): \(error)")
+            }
         }
     }
 
