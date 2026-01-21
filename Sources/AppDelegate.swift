@@ -47,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Auto-play if only one video in history
         if playedHistory.count == 1 {
             currentPlayingIndex = 0
+            windowController?.tableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[0].url)
         }
 
@@ -86,6 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @MainActor func playNextVideo() {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
+            windowController?.tableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[index + 1].url)
         }
     }

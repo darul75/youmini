@@ -103,11 +103,14 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let cellView = NSTableCellView()
+        cellView.wantsLayer = true
         cellView.textField = NSTextField()
         cellView.textField?.isEditable = false
         cellView.textField?.isBordered = false
         cellView.textField?.backgroundColor = .clear
         cellView.textField?.stringValue = (NSApp.delegate as? AppDelegate)?.playedHistory[row].title ?? ""
+        cellView.textField?.cell?.lineBreakMode = .byTruncatingTail
+        cellView.textField?.cell?.wraps = false
         cellView.addSubview(cellView.textField!)
         cellView.textField?.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -119,8 +122,10 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         // Highlight current playing video
         if row == (NSApp.delegate as? AppDelegate)?.currentPlayingIndex {
             cellView.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+            cellView.textField?.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         } else {
             cellView.layer?.backgroundColor = NSColor.clear.cgColor
+            cellView.textField?.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
         }
 
         return cellView
@@ -168,6 +173,7 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
            row >= 0 && row < history.count {
             let url = history[row].url
             (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = row
+            tableView.reloadData()
             playYouTubeURL(url)
         }
     }
