@@ -74,6 +74,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             windowController?.toggleMiniView(true)
         }
 
+        // Auto-resume if video was playing when app quit
+        let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
+        print("🚀 App launch - currentPlayingIndex: \(currentPlayingIndex ?? -1), wasPlayingFlag: \(wasPlayingFlag), historyCount: \(playedHistory.count)")
+
+        if let index = currentPlayingIndex, index < playedHistory.count,
+           wasPlayingFlag == true {
+            let videoURL = playedHistory[index].url
+            print("🎬 Auto-resuming video that was playing when app quit: \(videoURL)")
+            windowController?.tableView?.reloadData()  // Highlight current video
+            windowController?.playYouTubeURL(videoURL)
+            // Clear the flag after auto-playing (one-time only)
+            UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+            print("✅ Cleared wasPlayingOnQuit flag after auto-resume")
+        } else {
+            print("❌ Not auto-resuming: index=\(currentPlayingIndex ?? -1), flag=\(wasPlayingFlag), count=\(playedHistory.count)")
+        }
+
         // Then populate history with existing YouTube tabs
         let tabs = ChromeHelper.getYouTubeTabs()
         for tab in tabs {
@@ -178,7 +195,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func saveHistory() {
+    func saveHistory() {
         let historyData = playedHistory.map { ["url": $0.url, "title": $0.title] }
         UserDefaults.standard.set(historyData, forKey: "com.youtube.mini.history")
         UserDefaults.standard.set(currentPlayingIndex, forKey: "com.youtube.mini.currentIndex")

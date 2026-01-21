@@ -179,22 +179,51 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
            row >= 0 && row < history.count {
             let url = history[row].url
             (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = row
+            // Save the updated index immediately
+            (NSApp.delegate as? AppDelegate)?.saveHistory()
             tableView.reloadData()
             playYouTubeURL(url)
         }
     }
 
     @objc func videoDidFinish() {
+        // Clear playing flag since video finished
+        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+        print("🏁 Cleared wasPlayingOnQuit flag (video finished)")
         (NSApp.delegate as? AppDelegate)?.playNextVideo()
     }
 
     func stopPlayback() {
+        // Remove player observers first
+        if let player = player {
+            player.removeObserver(self, forKeyPath: "rate")
+        }
         player?.pause()
         player = nil
         playerView.player = nil
         // Remove any existing observers
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         print("Video playback stopped")
+        // Clear the playing flag since video is no longer playing
+        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+        print("🛑 Cleared wasPlayingOnQuit flag")
+    }
+
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        if keyPath == "rate", object is AVPlayer {
+            let newRate = change?[.newKey] as? Float ?? 0
+            let oldRate = change?[.oldKey] as? Float ?? 0
+
+            if newRate == 0 && oldRate > 0 {
+                // Video was paused
+                UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+                print("⏸️ Video paused - cleared wasPlayingOnQuit flag")
+            } else if newRate > 0 && oldRate == 0 {
+                // Video was resumed from pause
+                UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
+                print("▶️ Video resumed - set wasPlayingOnQuit = true")
+            }
+        }
     }
 
     func saveWindowFrame() {
@@ -399,14 +428,19 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
                     let stream = hdStream ?? fallbackStreams.highestResolutionStream()
                     print("Final selected stream: \(stream != nil ? "YES" : "NO")")
-                        if let stream {
-                            print("Stream URL: \(stream.url)")
-                            player = AVPlayer(url: stream.url)
-                            playerView.player = player
-                            // Add observer for end of video
-                            NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
-                            player?.play()
-                            print("Started playing video")
+                if let stream {
+                    print("Stream URL: \(stream.url)")
+                    player = AVPlayer(url: stream.url)
+                    playerView.player = player
+                    // Add observer for end of video
+                    NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+                    // Add observer for play/pause changes
+                    player?.addObserver(self, forKeyPath: "rate", options: [.new, .old], context: nil)
+                    player?.play()
+                    print("Started playing video")
+                    // Mark that video is now playing
+                    UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
+                    print("🎬 Set wasPlayingOnQuit = true")
                         }
                     // Hide spinner
                     self.spinner.stopAnimation(nil)
