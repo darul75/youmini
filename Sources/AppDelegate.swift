@@ -57,6 +57,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         windowController = WindowController()
 
         // Restore window frame before showing
+        print("🚀 App launch, restoring window frame...")
         windowController?.restoreWindowFrame()
 
         // Load persisted history first
@@ -99,16 +100,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor @objc func toggleWindow() {
         if let wc = windowController {
-            if isMiniViewMode {
-                // Exit MiniView first when hiding window
-                toggleMiniView()
-            }
-
             if wc.window?.isVisible == true {
+                print("🔽 Hiding window, saving frame...")
+                wc.saveWindowFrame()  // Save window frame BEFORE any mode changes
+
+                if isMiniViewMode {
+                    // Exit MiniView first when hiding window
+                    toggleMiniView()
+                }
+
                 wc.stopPlayback()  // Stop video before hiding window
-                wc.saveWindowFrame()  // Save window frame before closing
                 wc.close()
             } else {
+                print("🔼 Showing window, restoring frame...")
                 wc.restoreWindowFrame()  // Restore window frame before showing
                 wc.showWindow(nil)
             }
