@@ -7,11 +7,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var playedHistory: [(url: String, title: String)] = []
     var currentPlayingIndex: Int?
 
+    private func createPlayButtonIcon() -> NSImage {
+        let size = NSSize(width: 16, height: 16)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.black.setFill()
+        let path = NSBezierPath()
+        // Draw a play triangle: points at (3,4), (3,12), (11,8)
+        path.move(to: NSPoint(x: 3, y: 4))
+        path.line(to: NSPoint(x: 3, y: 12))
+        path.line(to: NSPoint(x: 11, y: 8))
+        path.close()
+        path.fill()
+        image.unlockFocus()
+        return image
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.title = "YT"
+            button.image = createPlayButtonIcon()
+            button.image?.isTemplate = true
         }
 
         // Create menu
