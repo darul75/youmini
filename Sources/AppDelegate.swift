@@ -45,6 +45,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         miniViewItem.target = self
         menu.addItem(miniViewItem)
 
+        let aboutItem = NSMenuItem(title: "About", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
         menu.addItem(NSMenuItem.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -52,6 +56,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.delegate = self
         statusItem.menu = menu
+
+        // Set up main menu for standard About panel
+        let mainMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu(title: "YouTubeMini")
+        appMenu.addItem(withTitle: "About YouTubeMini", action: #selector(showAbout), keyEquivalent: "")
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(withTitle: "Quit YouTubeMini", action: #selector(quitApp), keyEquivalent: "q")
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+        NSApplication.shared.mainMenu = mainMenu
 
         // Create window controller
         windowController = WindowController()
@@ -288,6 +303,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor @objc func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    @MainActor @objc func showAbout() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.orderFrontStandardAboutPanel(self)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

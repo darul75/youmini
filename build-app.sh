@@ -5,7 +5,13 @@
 
 set -e  # Exit on any error
 
-echo "🚀 Building YouTubeMini.app..."
+# Read version from VERSION file
+VERSION=$(cat VERSION)
+
+# Read build number
+BUILD_NUMBER=$(cat BUILD_NUMBER)
+
+echo "🚀 Building YouTubeMini.app version $VERSION (build $BUILD_NUMBER)..."
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
@@ -23,7 +29,7 @@ mkdir -p dist/YouTubeMini.app/Contents/Resources
 
 # Create Info.plist
 echo "📝 Creating Info.plist..."
-cat > dist/YouTubeMini.app/Contents/Info.plist << 'EOF'
+cat > dist/YouTubeMini.app/Contents/Info.plist << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -35,9 +41,9 @@ cat > dist/YouTubeMini.app/Contents/Info.plist << 'EOF'
     <key>CFBundleName</key>
     <string>YouTubeMini</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>$VERSION.$BUILD_NUMBER</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>$VERSION</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSUIElement</key>
@@ -63,6 +69,9 @@ chmod +x dist/YouTubeMini.app/Contents/MacOS/youtube-mini
 
 echo "✅ Build complete!"
 echo "📦 Your app is ready at: dist/YouTubeMini.app"
+
+# Increment build number
+echo $((BUILD_NUMBER + 1)) > BUILD_NUMBER
 echo ""
 echo "To share with your friend:"
 echo "1. Zip the YouTubeMini.app: zip -r YouTubeMini.zip dist/YouTubeMini.app"

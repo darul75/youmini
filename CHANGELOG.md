@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-01-21
+
 ### Added
 - Intelligent auto-resume feature that detects video pause/play state
 - Only resumes videos that were actually playing when app quit
 - Player rate monitoring to clear resume flag when video is paused
+- Version display in About menu
+- Proper app versioning system with VERSION file
 
 ### Removed
 - Safari browser support - app now focuses exclusively on Chrome integration
