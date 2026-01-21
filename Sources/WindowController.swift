@@ -2,10 +2,8 @@ import AppKit
 import AVKit
 @preconcurrency import YouTubeKit
 
-class WindowController: NSWindowController, NSTextFieldDelegate {
+class WindowController: NSWindowController {
     var playerView: AVPlayerView!
-    var urlField: NSTextField!
-    var playButton: NSButton!
     var spinner: NSProgressIndicator!
     var player: AVPlayer?
 
@@ -36,21 +34,6 @@ class WindowController: NSWindowController, NSTextFieldDelegate {
     func setupUI() {
         guard let contentView = window?.contentView else { return }
 
-        // URL input field
-        urlField = NSTextField()
-        urlField.placeholderString = "Enter YouTube URL"
-        urlField.delegate = self
-        urlField.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(urlField)
-
-        // Play button
-        playButton = NSButton()
-        playButton.title = "Play"
-        playButton.target = self
-        playButton.action = #selector(playVideo)
-        playButton.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(playButton)
-
         // Spinner
         spinner = NSProgressIndicator()
         spinner.style = .spinning
@@ -67,23 +50,11 @@ class WindowController: NSWindowController, NSTextFieldDelegate {
 
         // Constraints
         NSLayoutConstraint.activate([
-            // Player view: fill most of window
+            // Player view: fill entire window
             playerView.topAnchor.constraint(equalTo: contentView.topAnchor),
             playerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             playerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            playerView.bottomAnchor.constraint(equalTo: urlField.topAnchor, constant: -10),
-
-            // URL field: bottom left
-            urlField.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
-            urlField.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
-            urlField.widthAnchor.constraint(equalToConstant: 300),
-            urlField.heightAnchor.constraint(equalToConstant: 24),
-
-            // Play button: bottom right
-            playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
-            playButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
-            playButton.widthAnchor.constraint(equalToConstant: 70),
-            playButton.heightAnchor.constraint(equalToConstant: 24),
+            playerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
             // Spinner: center in player view
             spinner.centerXAnchor.constraint(equalTo: playerView.centerXAnchor),
@@ -91,9 +62,8 @@ class WindowController: NSWindowController, NSTextFieldDelegate {
         ])
     }
 
-    @objc func playVideo() {
-        let urlString = urlField.stringValue
-        guard !urlString.isEmpty, let url = URL(string: urlString) else {
+    func playYouTubeURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else {
             print("Invalid URL")
             return
         }
@@ -133,12 +103,6 @@ class WindowController: NSWindowController, NSTextFieldDelegate {
                     spinner.isHidden = true
                 }
             }
-        }
-    }
-
-    func controlTextDidEndEditing(_ obj: Notification) {
-        if let textField = obj.object as? NSTextField, textField == urlField {
-            playVideo()
         }
     }
 }
