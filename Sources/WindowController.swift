@@ -194,6 +194,40 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         print("Video playback stopped")
     }
 
+    func saveWindowFrame() {
+        guard let frame = window?.frame else { return }
+        let frameDict: [String: CGFloat] = [
+            "x": frame.origin.x,
+            "y": frame.origin.y,
+            "width": frame.size.width,
+            "height": frame.size.height
+        ]
+        UserDefaults.standard.set(frameDict, forKey: "com.youtube.mini.windowFrame")
+        print("Saved window frame: \(frame)")
+    }
+
+    func restoreWindowFrame() {
+        guard let frameDict = UserDefaults.standard.dictionary(forKey: "com.youtube.mini.windowFrame") as? [String: CGFloat],
+              let x = frameDict["x"],
+              let y = frameDict["y"],
+              let width = frameDict["width"],
+              let height = frameDict["height"] else {
+            print("No saved window frame, using default")
+            return
+        }
+
+        let frame = NSRect(x: x, y: y, width: width, height: height)
+
+        // Validate frame is on an active screen
+        if let screen = NSScreen.screens.first(where: { $0.frame.contains(frame.origin) }),
+           screen.frame.intersects(frame) {
+            window?.setFrame(frame, display: true, animate: false)
+            print("Restored window frame: \(frame)")
+        } else {
+            print("Saved frame is off-screen, using default")
+        }
+    }
+
     func toggleMiniView(_ enabled: Bool) {
         isMiniViewMode = enabled
 

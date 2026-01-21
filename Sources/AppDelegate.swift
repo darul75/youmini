@@ -1,12 +1,14 @@
 import AppKit
 @preconcurrency import YouTubeKit
 
+typealias Video = (url: String, title: String)
+
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var windowController: WindowController?
     var isMiniViewMode: Bool = false
     var autoPlayTimer: Timer?
-    var playedHistory: [(url: String, title: String)] = []
+    var playedHistory: [Video] = []
     var currentPlayingIndex: Int?
 
     private func createPlayButtonIcon() -> NSImage {
@@ -53,6 +55,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Create window controller
         windowController = WindowController()
+
+        // Restore window frame before showing
+        windowController?.restoreWindowFrame()
 
         // Load persisted history first
         loadPersistedHistory()
@@ -101,8 +106,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
             if wc.window?.isVisible == true {
                 wc.stopPlayback()  // Stop video before hiding window
+                wc.saveWindowFrame()  // Save window frame before closing
                 wc.close()
             } else {
+                wc.restoreWindowFrame()  // Restore window frame before showing
                 wc.showWindow(nil)
             }
         }
