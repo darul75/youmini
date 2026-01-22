@@ -1,5 +1,10 @@
 import AppKit
 
+struct PlaylistItem: Codable {
+    let url: String
+    let title: String
+}
+
 @MainActor
 class StatusBarManager: NSObject, NSMenuDelegate {
     var statusItem: NSStatusItem!
@@ -41,6 +46,18 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: "")
         miniViewItem.target = self
         menu.addItem(miniViewItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: "s")
+        saveItem.target = self
+        saveItem.keyEquivalentModifierMask = .command
+        menu.addItem(saveItem)
+
+        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: "o")
+        loadItem.target = self
+        loadItem.keyEquivalentModifierMask = .command
+        menu.addItem(loadItem)
 
         let aboutItem = NSMenuItem(title: "About", action: #selector(forwardShowAbout), keyEquivalent: "")
         aboutItem.target = self
@@ -100,5 +117,58 @@ class StatusBarManager: NSObject, NSMenuDelegate {
 
     @objc func forwardQuitApp() {
         appDelegate?.quitApp()
+    }
+
+    @objc func savePlaylist() {
+        guard let history = appDelegate?.playedHistory, !history.isEmpty else {
+            let alert = NSAlert()
+            alert.messageText = "No Playlist to Save"
+            alert.informativeText = "The playlist is empty."
+            alert.runModal()
+            return
+        }
+
+        let savePanel = NSSavePanel()
+        savePanel.allowedFileTypes = ["json"]
+        savePanel.nameFieldStringValue = "playlist.json"
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                do {
+                    let items = history.map { PlaylistItem(url: $0.url, title: $0.title) }
+                    let data = try JSONEncoder().encode(items)
+                    try data.write(to: url)
+                    print("Playlist saved to \(url.path)")
+                } catch {
+                    let alert = NSAlert()
+                    alert.messageText = "Save Failed"
+                    alert.informativeText = "Could not save playlist: \(error.localizedDescription)"
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
+    @objc func loadPlaylist() {
+        let openPanel = NSOpenPanel()
+        openPanel.allowedFileTypes = ["json"]
+        openPanel.begin { response in
+            if response == .OK, let url = openPanel.url {
+                do {
+                    let data = try Data(contentsOf: url)
+                    let loadedItems = try JSONDecoder().decode([PlaylistItem].self, from: data)
+                    let loadedHistory = loadedItems.map { (url: $0.url, title: $0.title) } as [Video]
+                    self.appDelegate?.playedHistory = loadedHistory
+                    self.appDelegate?.currentPlayingIndex = nil
+                    self.appDelegate?.saveHistory()
+                    self.appDelegate?.appWindowController?.listingTableView?.reloadData()
+                    print("Playlist loaded from \(url.path), \(loadedHistory.count) items")
+                } catch {
+                    let alert = NSAlert()
+                    alert.messageText = "Load Failed"
+                    alert.informativeText = "Could not load playlist: \(error.localizedDescription)"
+                    alert.runModal()
+                }
+            }
+        }
     }
 }

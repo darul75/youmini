@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 ### Added
 - Support for YouTube Shorts videos in Chrome tab detection and playback
 - StatusBarManager class for better separation of UI concerns
+- Playlist save/load feature: Export/import playlist as JSON via status bar menu (Cmd+S to save, Cmd+O to load)
+- Auto-save loaded playlists to UserDefaults
 
 ### Fixed
 - Double-clicking video in history now selects the row, enabling remove action without "No Selection" alert
