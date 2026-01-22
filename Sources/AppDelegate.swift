@@ -157,6 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             currentPlayingIndex = index + 1
             reloadListData()
             appWindowController?.playerController.playYouTubeURL(playedHistory[index + 1].url)
+            appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(integer: index + 1), byExtendingSelection: false)
             saveHistory()
         }
     }

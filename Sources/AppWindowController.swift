@@ -7,7 +7,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
     var storedSplitView: NSSplitView?
     var listingController: ListingTableViewController!
     var playerController: PlayerViewController!
-    var currentURL: String?
     let historyPanelWidth: CGFloat = 200
     let buttonPanelHeight: CGFloat = 40
     let buttonPanelDeployedHeight: CGFloat = 80
@@ -128,12 +127,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         splitView.subviews[1].frame = NSRect(x: newLeftWidth + dividerThickness, y: 0, width: newRightWidth, height: splitView.bounds.height)
     }
 
-
-
-
-
-
-
     func saveWindowFrame() {
         guard let frame = window?.frame else {
             print("saveWindowFrame: No window frame to save")
@@ -247,8 +240,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         contentView.layoutSubtreeIfNeeded()
     }
-
-
 
     @objc func showAddField() {
         let isShowing = buttonPanelHeightConstraint.constant == buttonPanelHeight
