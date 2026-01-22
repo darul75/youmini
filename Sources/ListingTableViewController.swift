@@ -80,7 +80,7 @@ class ListingTableViewController: NSViewController, NSTableViewDataSource, NSTab
             (NSApp.delegate as? AppDelegate)?.saveHistory()
             tableView.reloadData()
             tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-            (NSApp.delegate as? AppDelegate)?.appWindowController?.playYouTubeURL(url)
+            (NSApp.delegate as? AppDelegate)?.appWindowController?.playerController.playYouTubeURL(url)
         }
     }
     

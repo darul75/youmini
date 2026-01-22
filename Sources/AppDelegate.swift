@@ -30,7 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
             reloadListData()
-            appWindowController?.playYouTubeURL(videoURL)
+            appWindowController?.playerController.playYouTubeURL(videoURL)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
         }
 
@@ -61,7 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     statusBarManager?.toggleMiniView()
                 }
 
-                wc.stopPlayback()
+                wc.playerController.stopPlayback()
                 wc.close()
             } else {
                 wc.restoreWindowFrame()
@@ -156,7 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
             reloadListData()
-            appWindowController?.playYouTubeURL(playedHistory[index + 1].url)
+            appWindowController?.playerController.playYouTubeURL(playedHistory[index + 1].url)
             saveHistory()
         }
     }
@@ -190,7 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         appWindowController?.showWindow(nil)
-        appWindowController?.playYouTubeURL(info.url)
+        appWindowController?.playerController.playYouTubeURL(info.url)
     }
 
 
