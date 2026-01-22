@@ -180,7 +180,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard let info = ChromeHelper.getActiveTabInfo(),
               info.url.contains("youtube.com/watch") || info.url.contains("youtube.com/shorts"),
-              info.url != appWindowController?.currentURL else {
+              info.url != appWindowController?.playerController.currentURL else {
             return
         }
         print("Detected new YouTube URL: \(info.url)")
