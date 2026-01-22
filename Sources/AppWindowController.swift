@@ -157,8 +157,7 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
             cellView.textField!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: 0),
             cellView.textField!.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
         ])
-
-        // Highlight current playing video
+        
         if row == (NSApp.delegate as? AppDelegate)?.currentPlayingIndex {
             cellView.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
             cellView.textField?.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
@@ -174,24 +173,16 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
         let dividerThickness = splitView.dividerThickness
         let totalWidth = splitView.bounds.width
 
-        // Get current left width
         let leftWidth = splitView.subviews[0].frame.width
-
-        // Ensure left pane has at least historyPanelWidth
         var newLeftWidth = max(historyPanelWidth, leftWidth)
 
-        // If resizing and left is smaller, enforce min
         if oldSize.width > totalWidth && leftWidth < historyPanelWidth {
             newLeftWidth = historyPanelWidth
         }
 
-        // Cap to leave space for right
         newLeftWidth = min(newLeftWidth, totalWidth - dividerThickness - 100)
-
-        // Calculate right width
         let newRightWidth = totalWidth - newLeftWidth - dividerThickness
 
-        // Set frames
         splitView.subviews[0].frame = NSRect(x: 0, y: 0, width: newLeftWidth, height: splitView.bounds.height)
         splitView.subviews[1].frame = NSRect(x: newLeftWidth + dividerThickness, y: 0, width: newRightWidth, height: splitView.bounds.height)
     }
@@ -203,6 +194,16 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
 
     func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? {
         return (NSApp.delegate as? AppDelegate)?.playedHistory[row].title ?? ""
+    }
+
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        guard let tableView = notification.object as? NSTableView, tableView == listingTableView else { return }
+
+        let selectedRow = tableView.selectedRow
+        if selectedRow >= 0 {
+            (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = selectedRow
+            UserDefaults.standard.set(selectedRow, forKey: "com.youtube.mini.currentIndex")
+        }
     }
 
     @MainActor @objc func tableClick(_ sender: NSTableView) {

@@ -1,5 +1,10 @@
 import AppKit
 
+let SHORTCUT_QUIT = "q"
+let SHORTCUT_LOAD_PLAYLIST = "o"
+let SHORTCUT_SAVE_PLAYLIST = "s"
+let SHORTCUT_TOGGLE_VIEW = "t"
+
 struct PlaylistItem: Codable {
     let url: String
     let title: String
@@ -37,11 +42,17 @@ class StatusBarManager: NSObject, NSMenuDelegate {
             guard let self = self, event.modifierFlags.contains(.command), event.modifierFlags.intersection(.deviceIndependentFlagsMask).isSubset(of: [.command]) else {
                 return event
             }
-            if event.characters == "s" {
+            if event.characters == SHORTCUT_SAVE_PLAYLIST {
                 self.savePlaylist()
                 return nil
-            } else if event.characters == "o" {
+            } else if event.characters == SHORTCUT_LOAD_PLAYLIST {
                 self.loadPlaylist()
+                return nil
+            } else if event.characters == SHORTCUT_QUIT {
+                self.forwardQuitApp()
+                return nil
+            } else if event.characters == SHORTCUT_TOGGLE_VIEW {
+                self.toggleMiniView()
                 return nil
             }
             return event
@@ -60,17 +71,17 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         openItem.target = self
         menu.addItem(openItem)
 
-        let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: "")
+        let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: SHORTCUT_TOGGLE_VIEW)
         miniViewItem.target = self
         menu.addItem(miniViewItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: "")
+        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: SHORTCUT_SAVE_PLAYLIST)
         saveItem.target = self
         menu.addItem(saveItem)
 
-        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: "")
+        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: SHORTCUT_LOAD_PLAYLIST)
         loadItem.target = self
         menu.addItem(loadItem)
 
@@ -80,7 +91,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         menu.addItem(aboutItem)
 
         menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(forwardQuitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(forwardQuitApp), keyEquivalent: SHORTCUT_QUIT)
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -92,7 +103,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         let appMenu = NSMenu(title: "YouTubeMini")
         appMenu.addItem(withTitle: "About YouTubeMini", action: #selector(forwardShowAbout), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit YouTubeMini", action: #selector(forwardQuitApp), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit YouTubeMini", action: #selector(forwardQuitApp), keyEquivalent: SHORTCUT_QUIT)
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
         NSApplication.shared.mainMenu = mainMenu
@@ -154,7 +165,6 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     let items = history.map { PlaylistItem(url: $0.url, title: $0.title) }
                     let data = try JSONEncoder().encode(items)
                     try data.write(to: url)
-                    print("Playlist saved to \(url.path)")
                 } catch {
                     let alert = NSAlert()
                     alert.messageText = "Save Failed"
@@ -178,8 +188,10 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     self.appDelegate?.playedHistory = loadedHistory
                     self.appDelegate?.currentPlayingIndex = nil
                     self.appDelegate?.saveHistory()
-                    self.appDelegate?.appWindowController?.listingTableView?.reloadData()
-                    print("Playlist loaded from \(url.path), \(loadedHistory.count) items")
+                    self.appDelegate?.reloadListData()
+
+                    self.appDelegate?.appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+                    UserDefaults.standard.set(0, forKey: "com.youtube.mini.currentIndex")
                 } catch {
                     let alert = NSAlert()
                     alert.messageText = "Load Failed"

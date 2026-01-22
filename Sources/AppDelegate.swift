@@ -24,11 +24,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
+        currentPlayingIndex = UserDefaults.standard.integer(forKey: "com.youtube.mini.currentIndex")
 
         if let index = currentPlayingIndex, index < playedHistory.count,
             wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
-            appWindowController?.listingTableView?.reloadData()
+            reloadListData()
             appWindowController?.playYouTubeURL(videoURL)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
         }
@@ -40,19 +41,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         appWindowController?.showWindow(nil)
 
-        if playedHistory.count == 1 {
-            currentPlayingIndex = 0
-            appWindowController?.listingTableView?.reloadData()
-            appWindowController?.playYouTubeURL(playedHistory[0].url)
+        if let index = currentPlayingIndex {
+            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
         }
 
         startAutoPlayTimer()
     }
 
+    @MainActor func reloadListData() {
+        appWindowController?.listingTableView?.reloadData()
+    }
+
     @MainActor @objc func toggleWindow() {
         if let wc = appWindowController {
             if wc.window?.isVisible == true {
-                print("🔽 Hiding window, saving frame...")
                 wc.saveWindowFrame()
 
                 if isMiniViewMode {
@@ -62,14 +64,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 wc.stopPlayback()
                 wc.close()
             } else {
-                print("🔼 Showing window, restoring frame...")
                 wc.restoreWindowFrame()
                 wc.showWindow(nil)
             }
         }
     }
-
-
 
     @MainActor func addToHistory(url: String, title: String) {
         playedHistory.removeAll { $0.url == url }
@@ -77,8 +76,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if playedHistory.count > 20 {
             playedHistory.removeFirst()
         }
-        print("Added to history: \(url) - \(title), total: \(playedHistory.count)")
-
         appWindowController?.listingTableView?.reloadData()
 
         if playedHistory.count == 1 && currentPlayingIndex == nil {
@@ -110,12 +107,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let historyData = playedHistory.map { ["url": $0.url, "title": $0.title] }
         UserDefaults.standard.set(historyData, forKey: "com.youtube.mini.history")
         UserDefaults.standard.set(currentPlayingIndex, forKey: "com.youtube.mini.currentIndex")
-        print("Saved history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
     }
 
     @MainActor private func loadPersistedHistory() {
         guard let historyData = UserDefaults.standard.array(forKey: "com.youtube.mini.history") as? [[String: String]],
-              !historyData.isEmpty else {
+            !historyData.isEmpty else {
             return
         }
 
@@ -126,42 +122,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return (url, title)
         }
-
-        currentPlayingIndex = UserDefaults.standard.integer(forKey: "com.youtube.mini.currentIndex")
-        if let index = currentPlayingIndex, index >= playedHistory.count {
-            currentPlayingIndex = nil
-            print("Current index \(index) out of bounds, resetting to nil")
-        }
-
-        print("Loaded persisted history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
-        appWindowController?.listingTableView?.reloadData()
+        
+        reloadListData()
     }
 
     @MainActor func removeFromHistory(at index: Int) {
         guard index >= 0 && index < playedHistory.count else { return }
         playedHistory.remove(at: index)
-
         if let current = currentPlayingIndex {
             if index < current {
                 currentPlayingIndex = current - 1
             } else if index == current {
-                currentPlayingIndex = nil
+                if index < playedHistory.count {
+                    currentPlayingIndex = index
+                } else if index > 0 {
+                    currentPlayingIndex = index - 1
+                } else {
+                    currentPlayingIndex = nil
+                }
             }
         }
         saveHistory()
         appWindowController?.listingTableView?.reloadData()
+
+        if let current = currentPlayingIndex {
+            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: current), byExtendingSelection: false)
+        } else {
+            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(), byExtendingSelection: false)
+        }
     }
 
     @MainActor func playNextVideo() {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
-            appWindowController?.listingTableView?.reloadData()
+            reloadListData()
             appWindowController?.playYouTubeURL(playedHistory[index + 1].url)
             saveHistory()
         }
     }
-
-
 
     func startAutoPlayTimer() {
         autoPlayTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
@@ -181,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard let info = ChromeHelper.getActiveTabInfo(),
-              info.url.contains("youtube.com/watch"),
+              info.url.contains("youtube.com/watch") || info.url.contains("youtube.com/shorts"),
               info.url != appWindowController?.currentURL else {
             return
         }
