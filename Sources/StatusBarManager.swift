@@ -124,14 +124,15 @@ class StatusBarManager: NSObject, NSMenuDelegate {
             let alert = NSAlert()
             alert.messageText = "No Playlist to Save"
             alert.informativeText = "The playlist is empty."
-            alert.runModal()
+            alert.beginSheetModal(for: appDelegate?.appWindowController?.window ?? NSApplication.shared.mainWindow!)
             return
         }
 
         let savePanel = NSSavePanel()
         savePanel.allowedFileTypes = ["json"]
         savePanel.nameFieldStringValue = "playlist.json"
-        savePanel.begin { response in
+        let window = appDelegate?.appWindowController?.window ?? NSApplication.shared.mainWindow!
+        savePanel.beginSheetModal(for: window) { response in
             if response == .OK, let url = savePanel.url {
                 do {
                     let items = history.map { PlaylistItem(url: $0.url, title: $0.title) }
@@ -142,7 +143,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     let alert = NSAlert()
                     alert.messageText = "Save Failed"
                     alert.informativeText = "Could not save playlist: \(error.localizedDescription)"
-                    alert.runModal()
+                    alert.beginSheetModal(for: window)
                 }
             }
         }
@@ -151,7 +152,8 @@ class StatusBarManager: NSObject, NSMenuDelegate {
     @objc func loadPlaylist() {
         let openPanel = NSOpenPanel()
         openPanel.allowedFileTypes = ["json"]
-        openPanel.begin { response in
+        let window = appDelegate?.appWindowController?.window ?? NSApplication.shared.mainWindow!
+        openPanel.beginSheetModal(for: window) { response in
             if response == .OK, let url = openPanel.url {
                 do {
                     let data = try Data(contentsOf: url)
@@ -166,7 +168,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     let alert = NSAlert()
                     alert.messageText = "Load Failed"
                     alert.informativeText = "Could not load playlist: \(error.localizedDescription)"
-                    alert.runModal()
+                    alert.beginSheetModal(for: window)
                 }
             }
         }
