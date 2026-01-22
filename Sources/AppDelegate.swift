@@ -3,91 +3,40 @@ import AppKit
 
 typealias Video = (url: String, title: String)
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    var statusItem: NSStatusItem!
-    var windowController: WindowController?
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var statusBarManager: StatusBarManager?
+    var appWindowController: AppWindowController?
     var isMiniViewMode: Bool = false
     var autoPlayTimer: Timer?
     var playedHistory: [Video] = []
     var currentPlayingIndex: Int?
 
-    private func createPlayButtonIcon() -> NSImage {
-        let size = NSSize(width: 16, height: 16)
-        let image = NSImage(size: size)
-        image.lockFocus()
-        NSColor.black.setFill()
-        let path = NSBezierPath()
-        path.move(to: NSPoint(x: 2, y: 2))
-        path.line(to: NSPoint(x: 2, y: 14))
-        path.line(to: NSPoint(x: 13, y: 8))
-        path.close()
-        path.fill()
-        image.unlockFocus()
-        return image
-    }
+
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.image = createPlayButtonIcon()
-            button.image?.isTemplate = true
-        }
+        statusBarManager = StatusBarManager(appDelegate: self)
 
-        let menu = NSMenu()
-        let openItem = NSMenuItem(title: "Open Window", action: #selector(toggleWindow), keyEquivalent: "")
-        openItem.target = self
-        menu.addItem(openItem)
-
-        let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: "")
-        miniViewItem.target = self
-        menu.addItem(miniViewItem)
-
-        let aboutItem = NSMenuItem(title: "About", action: #selector(showAbout), keyEquivalent: "")
-        aboutItem.target = self
-        menu.addItem(aboutItem)
-
-        menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        menu.delegate = self
-        statusItem.menu = menu
-
-        let mainMenu = NSMenu()
-        let appMenuItem = NSMenuItem()
-        let appMenu = NSMenu(title: "YouTubeMini")
-        appMenu.addItem(withTitle: "About YouTubeMini", action: #selector(showAbout), keyEquivalent: "")
-        appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit YouTubeMini", action: #selector(quitApp), keyEquivalent: "q")
-        appMenuItem.submenu = appMenu
-        mainMenu.addItem(appMenuItem)
-        NSApplication.shared.mainMenu = mainMenu
-
-        windowController = WindowController()
+        appWindowController = AppWindowController()
 
         print("🚀 App launch, restoring window frame...")
-        windowController?.restoreWindowFrame()
+        appWindowController?.restoreWindowFrame()
 
         loadPersistedHistory()
 
         isMiniViewMode = UserDefaults.standard.bool(forKey: "com.youtube.mini.miniViewMode")
         if isMiniViewMode {
-            if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
-                miniViewItem.title = "Split View"
-            }
-            windowController?.toggleMiniView(true)
+            appWindowController?.toggleMiniView(true)
         }
 
         let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
         print("🚀 App launch - currentPlayingIndex: \(currentPlayingIndex ?? -1), wasPlayingFlag: \(wasPlayingFlag), historyCount: \(playedHistory.count)")
 
         if let index = currentPlayingIndex, index < playedHistory.count,
-           wasPlayingFlag == true {
+            wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
             print("🎬 Auto-resuming video that was playing when app quit: \(videoURL)")
-            windowController?.listingTableView?.reloadData()
-            windowController?.playYouTubeURL(videoURL)
+            appWindowController?.listingTableView?.reloadData()
+            appWindowController?.playYouTubeURL(videoURL)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
             print("✅ Cleared wasPlayingOnQuit flag after auto-resume")
         } else {
@@ -99,80 +48,55 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             addToHistory(url: tab.url, title: tab.title)
         }
 
-        windowController?.showWindow(nil)
-
-        if let openItem = menu.items.first(where: { $0.action == #selector(toggleWindow) }) {
-            openItem.title = "Hide Window"
-        }
+        appWindowController?.showWindow(nil)
 
         if playedHistory.count == 1 {
             currentPlayingIndex = 0
-            windowController?.listingTableView?.reloadData()
-            windowController?.playYouTubeURL(playedHistory[0].url)
+            appWindowController?.listingTableView?.reloadData()
+            appWindowController?.playYouTubeURL(playedHistory[0].url)
         }
 
         startAutoPlayTimer()
     }
 
     @MainActor @objc func toggleWindow() {
-        if let wc = windowController {
+        if let wc = appWindowController {
             if wc.window?.isVisible == true {
                 print("🔽 Hiding window, saving frame...")
-                wc.saveWindowFrame()  // Save window frame BEFORE any mode changes
+                wc.saveWindowFrame()
 
                 if isMiniViewMode {
-                    // Exit MiniView first when hiding window
-                    toggleMiniView()
+                    statusBarManager?.toggleMiniView()
                 }
 
-                wc.stopPlayback()  // Stop video before hiding window
+                wc.stopPlayback()
                 wc.close()
             } else {
                 print("🔼 Showing window, restoring frame...")
-                wc.restoreWindowFrame()  // Restore window frame before showing
+                wc.restoreWindowFrame()
                 wc.showWindow(nil)
             }
         }
     }
 
-    @MainActor @objc func toggleMiniView() {
-        isMiniViewMode.toggle()
 
-        // Update menu title
-        if let miniViewItem = statusItem.menu?.items.first(where: { $0.action == #selector(toggleMiniView) }) {
-            miniViewItem.title = isMiniViewMode ? "Split View" : "Mini View"
-        }
-
-        // Notify window controller
-        windowController?.toggleMiniView(isMiniViewMode)
-
-        // Persist mode
-        UserDefaults.standard.set(isMiniViewMode, forKey: "com.youtube.mini.miniViewMode")
-        print("MiniView mode \(isMiniViewMode ? "enabled" : "disabled")")
-    }
 
     @MainActor func addToHistory(url: String, title: String) {
-        // Remove if already exists
         playedHistory.removeAll { $0.url == url }
-        // Add to end
         playedHistory.append((url, title))
-        // Limit to 20, remove oldest
         if playedHistory.count > 20 {
             playedHistory.removeFirst()
         }
         print("Added to history: \(url) - \(title), total: \(playedHistory.count)")
-        // Reload table
-        windowController?.listingTableView?.reloadData()
 
-        // If this is the first video and no current playing, set index
+        appWindowController?.listingTableView?.reloadData()
+
         if playedHistory.count == 1 && currentPlayingIndex == nil {
             currentPlayingIndex = 0
         }
 
-        // Save history to UserDefaults
         saveHistory()
 
-        // Fetch real title asynchronously
         Task { @MainActor in
             do {
                 print("Fetching real title for URL: \(url)")
@@ -180,11 +104,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let metadata = try await youTube.metadata
                 if let realTitle = metadata?.title, realTitle != title {
                     print("Updating title from '\(title)' to '\(realTitle)'")
-                    // Update the existing entry
                     if let index = playedHistory.firstIndex(where: { $0.url == url }) {
                         playedHistory[index] = (url, realTitle)
-                        windowController?.listingTableView?.reloadData()
-                        // Save updated history
+                        appWindowController?.listingTableView?.reloadData()
                         saveHistory()
                     }
                 }
@@ -223,13 +145,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         print("Loaded persisted history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
-        windowController?.listingTableView?.reloadData()
+        appWindowController?.listingTableView?.reloadData()
     }
 
     @MainActor func removeFromHistory(at index: Int) {
         guard index >= 0 && index < playedHistory.count else { return }
         playedHistory.remove(at: index)
-        // Adjust currentPlayingIndex
+
         if let current = currentPlayingIndex {
             if index < current {
                 currentPlayingIndex = current - 1
@@ -238,15 +160,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         saveHistory()
-        windowController?.listingTableView?.reloadData()
+        appWindowController?.listingTableView?.reloadData()
         print("Removed from history at index \(index), total: \(playedHistory.count)")
     }
 
     @MainActor func playNextVideo() {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
-            windowController?.listingTableView?.reloadData()
-            windowController?.playYouTubeURL(playedHistory[index + 1].url)
+            appWindowController?.listingTableView?.reloadData()
+            appWindowController?.playYouTubeURL(playedHistory[index + 1].url)
             saveHistory()
         }
     }
@@ -264,7 +186,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @MainActor func checkForAutoPlay() {
         print("Checking for auto-play...")
 
-        // Sync history with detected YouTube tabs
         let tabs = ChromeHelper.getYouTubeTabs()
         for tab in tabs {
             if !playedHistory.contains(where: { $0.url == tab.url }) {
@@ -275,31 +196,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         guard let info = ChromeHelper.getActiveTabInfo(),
               info.url.contains("youtube.com/watch"),
-              info.url != windowController?.currentURL else {
+              info.url != appWindowController?.currentURL else {
             print("No new YouTube URL detected")
             return
         }
         print("Detected new YouTube URL: \(info.url)")
 
-        // Add to history (already added above, but ensure)
-        
-        // Check if video is paused in Chrome, if yes, start it
         if let paused = ChromeHelper.isVideoPaused(url: info.url), paused {
             ChromeHelper.playVideoInChrome(url: info.url)
         }
         
-        // Auto-play in mini app
-        windowController?.showWindow(nil)
-        windowController?.playYouTubeURL(info.url)
+        appWindowController?.showWindow(nil)
+        appWindowController?.playYouTubeURL(info.url)
     }
-    
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        // Update Show/Hide Window title
-        if let openItem = menu.items.first(where: { $0.action == #selector(toggleWindow) }) {
-            let isVisible = windowController?.window?.isVisible == true
-            openItem.title = isVisible ? "Hide Window" : "Show Window"
-        }
-    }
+
 
     @MainActor @objc func quitApp() {
         NSApplication.shared.terminate(nil)
@@ -311,8 +221,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Save window frame before app terminates
         print("💾 App terminating, saving window frame...")
-        windowController?.saveWindowFrame()
+        appWindowController?.saveWindowFrame()
     }
 }
