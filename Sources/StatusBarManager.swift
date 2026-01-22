@@ -64,7 +64,6 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         mainMenu.addItem(appMenuItem)
         NSApplication.shared.mainMenu = mainMenu
 
-        // Update menu items based on state
         updateMenuItems()
     }
 
@@ -84,7 +83,6 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         appDelegate.isMiniViewMode.toggle()
         appDelegate.appWindowController?.toggleMiniView(appDelegate.isMiniViewMode)
         UserDefaults.standard.set(appDelegate.isMiniViewMode, forKey: "com.youtube.mini.miniViewMode")
-        print("MiniView mode \(appDelegate.isMiniViewMode ? "enabled" : "disabled")")
         updateMenuItems()
     }
 

@@ -11,14 +11,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var playedHistory: [Video] = []
     var currentPlayingIndex: Int?
 
-
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarManager = StatusBarManager(appDelegate: self)
-
         appWindowController = AppWindowController()
-
-        print("🚀 App launch, restoring window frame...")
         appWindowController?.restoreWindowFrame()
 
         loadPersistedHistory()
@@ -29,18 +24,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
-        print("🚀 App launch - currentPlayingIndex: \(currentPlayingIndex ?? -1), wasPlayingFlag: \(wasPlayingFlag), historyCount: \(playedHistory.count)")
 
         if let index = currentPlayingIndex, index < playedHistory.count,
             wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
-            print("🎬 Auto-resuming video that was playing when app quit: \(videoURL)")
             appWindowController?.listingTableView?.reloadData()
             appWindowController?.playYouTubeURL(videoURL)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
-            print("✅ Cleared wasPlayingOnQuit flag after auto-resume")
-        } else {
-            print("❌ Not auto-resuming: index=\(currentPlayingIndex ?? -1), flag=\(wasPlayingFlag), count=\(playedHistory.count)")
         }
 
         let tabs = ChromeHelper.getYouTubeTabs()
@@ -126,7 +116,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor private func loadPersistedHistory() {
         guard let historyData = UserDefaults.standard.array(forKey: "com.youtube.mini.history") as? [[String: String]],
               !historyData.isEmpty else {
-            print("No persisted history found (first launch)")
             return
         }
 
@@ -161,7 +150,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         saveHistory()
         appWindowController?.listingTableView?.reloadData()
-        print("Removed from history at index \(index), total: \(playedHistory.count)")
     }
 
     @MainActor func playNextVideo() {
@@ -184,8 +172,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @MainActor func checkForAutoPlay() {
-        print("Checking for auto-play...")
-
         let tabs = ChromeHelper.getYouTubeTabs()
         for tab in tabs {
             if !playedHistory.contains(where: { $0.url == tab.url }) {
@@ -197,7 +183,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let info = ChromeHelper.getActiveTabInfo(),
               info.url.contains("youtube.com/watch"),
               info.url != appWindowController?.currentURL else {
-            print("No new YouTube URL detected")
             return
         }
         print("Detected new YouTube URL: \(info.url)")
@@ -221,7 +206,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        print("💾 App terminating, saving window frame...")
         appWindowController?.saveWindowFrame()
     }
 }

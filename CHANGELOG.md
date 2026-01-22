@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 
 ### Added
 - Support for YouTube Shorts videos in Chrome tab detection and playback
+- StatusBarManager class for better separation of UI concerns
 
 ### Fixed
 - Double-clicking video in history now selects the row, enabling remove action without "No Selection" alert
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 
 ### Changed
 - Improved add URL panel constraint management to prevent minus button shifting when toggling panel
+- Refactored status bar and menu setup into dedicated StatusBarManager class
 
 ## [1.0.1] - 2026-01-21
 

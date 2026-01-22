@@ -107,7 +107,6 @@ class ChromeHelper {
         }
 
         guard let resultString = result.stringValue, !resultString.isEmpty else {
-            print("No result string from AppleScript")
             return nil
         }
         print("AppleScript result: \(resultString)")

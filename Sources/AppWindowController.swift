@@ -2,7 +2,7 @@ import AppKit
 import AVKit
 @preconcurrency import YouTubeKit
 
-class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
+class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
     var splitView: NSSplitView!
     var storedSplitView: NSSplitView?
     var listingTableView: NSTableView!
@@ -198,7 +198,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
     func numberOfRows(in tableView: NSTableView) -> Int {
         let count = (NSApp.delegate as? AppDelegate)?.playedHistory.count ?? 0
-        print("History count: \(count)")
         return count
     }
 
