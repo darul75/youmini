@@ -97,7 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
            wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
             print("🎬 Auto-resuming video that was playing when app quit: \(videoURL)")
-            windowController?.tableView?.reloadData()  // Highlight current video
+            windowController?.listingTableView?.reloadData()  // Highlight current video
             windowController?.playYouTubeURL(videoURL)
             // Clear the flag after auto-playing (one-time only)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
@@ -122,7 +122,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Auto-play if only one video in history
         if playedHistory.count == 1 {
             currentPlayingIndex = 0
-            windowController?.tableView?.reloadData()
+            windowController?.listingTableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[0].url)
         }
 
@@ -178,7 +178,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         print("Added to history: \(url) - \(title), total: \(playedHistory.count)")
         // Reload table
-        windowController?.tableView?.reloadData()
+        windowController?.listingTableView?.reloadData()
 
         // If this is the first video and no current playing, set index
         if playedHistory.count == 1 && currentPlayingIndex == nil {
@@ -199,7 +199,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     // Update the existing entry
                     if let index = playedHistory.firstIndex(where: { $0.url == url }) {
                         playedHistory[index] = (url, realTitle)
-                        windowController?.tableView?.reloadData()
+                        windowController?.listingTableView?.reloadData()
                         // Save updated history
                         saveHistory()
                     }
@@ -239,13 +239,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         print("Loaded persisted history: \(playedHistory.count) items, current index: \(currentPlayingIndex ?? -1)")
-        windowController?.tableView?.reloadData()
+        windowController?.listingTableView?.reloadData()
+    }
+
+    @MainActor func removeFromHistory(at index: Int) {
+        guard index >= 0 && index < playedHistory.count else { return }
+        playedHistory.remove(at: index)
+        // Adjust currentPlayingIndex
+        if let current = currentPlayingIndex {
+            if index < current {
+                currentPlayingIndex = current - 1
+            } else if index == current {
+                currentPlayingIndex = nil
+            }
+        }
+        saveHistory()
+        windowController?.listingTableView?.reloadData()
+        print("Removed from history at index \(index), total: \(playedHistory.count)")
     }
 
     @MainActor func playNextVideo() {
         if let index = currentPlayingIndex, index + 1 < playedHistory.count {
             currentPlayingIndex = index + 1
-            windowController?.tableView?.reloadData()
+            windowController?.listingTableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[index + 1].url)
             saveHistory()
         }

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 
 ## [Unreleased]
 
+### Fixed
+- Double-clicking video in history now selects the row, enabling remove action without "No Selection" alert
+- Alert dialogs now centered on the app window instead of screen center
+- Reduced left/right margins in video history table for tighter layout
+
+### Changed
+- Improved add URL panel constraint management to prevent minus button shifting when toggling panel
+
 ## [1.0.1] - 2026-01-21
 
 ### Added

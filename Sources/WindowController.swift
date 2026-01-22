@@ -4,32 +4,40 @@ import AVKit
 
 class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
     var splitView: NSSplitView!
-    var tableView: NSTableView!
+    var storedSplitView: NSSplitView?
+    var listingTableView: NSTableView!
     var playerView: AVPlayerView!
     var spinner: NSProgressIndicator!
     var player: AVPlayer?
     var currentURL: String?
     let historyPanelWidth: CGFloat = 200
+    let buttonPanelHeight: CGFloat = 40
+    let buttonPanelDeployedHeight: CGFloat = 80
     var isMiniViewMode: Bool = false
     var originalWindowFrame: NSRect?
-    var storedSplitView: NSSplitView?
-
-
+    var addButton: NSButton!
+    var removeButton: NSButton!
+    var urlField: NSTextField!
+    var submitButton: NSButton!
+    var buttonPanel: NSView!
+    var buttonPanelHeightConstraint: NSLayoutConstraint!
+    var urlFieldConstraints: [NSLayoutConstraint] = []
+    var submitButtonConstraints: [NSLayoutConstraint] = []
 
     init() {
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 800, height: 400),
+        let mainPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 800, height: 400),
                             styleMask: [.titled, .resizable, .closable, .nonactivatingPanel],
                             backing: .buffered,
                             defer: false)
-        panel.level = .floating
-        panel.isMovableByWindowBackground = true
-        // Position centered
+        mainPanel.level = .floating
+        mainPanel.isMovableByWindowBackground = true
+
         if let screen = NSScreen.main {
             let screenFrame = screen.frame
-            panel.setFrameOrigin(NSPoint(x: (screenFrame.width - 800) / 2, y: (screenFrame.height - 400) / 2))
+            mainPanel.setFrameOrigin(NSPoint(x: (screenFrame.width - 800) / 2, y: (screenFrame.height - 400) / 2))
         }
 
-        super.init(window: panel)
+        super.init(window: mainPanel)
 
         setupUI()
     }
@@ -49,31 +57,64 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         splitView.frame = contentView.bounds
         splitView.delegate = self
 
-        // Left: History table
         let leftView = NSView()
-        tableView = NSTableView()
+        listingTableView = NSTableView()
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Title"))
         column.title = "History"
         column.isEditable = false
-        tableView.addTableColumn(column)
-        tableView.headerView = nil
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.allowsMultipleSelection = false
-        tableView.target = self
-        tableView.doubleAction = #selector(tableClick)
+        listingTableView.addTableColumn(column)
+        listingTableView.headerView = nil
+        listingTableView.dataSource = self
+        listingTableView.delegate = self
+        listingTableView.allowsMultipleSelection = false
+        listingTableView.target = self
+        listingTableView.doubleAction = #selector(tableClick)
+        listingTableView.headerView = nil
 
-        let scrollView = NSScrollView()
-        scrollView.documentView = tableView
-        scrollView.hasVerticalScroller = true
-        scrollView.autoresizingMask = [.width, .height]
-        leftView.addSubview(scrollView)
-        scrollView.frame = leftView.bounds
+        let listingScrollView = NSScrollView()
+        listingScrollView.documentView = listingTableView
+        listingScrollView.hasVerticalScroller = true
+        listingScrollView.contentInsets = NSEdgeInsets(top: 0, left: -4, bottom: 0, right: -4)
+        listingScrollView.translatesAutoresizingMaskIntoConstraints = false
+        
 
-        // Hide table header to remove column resize handle
-        tableView.headerView = nil
+        let stackView = NSStackView()
+        stackView.orientation = .vertical
+        stackView.distribution = .fill
+        stackView.spacing = 0
+        leftView.addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: leftView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: leftView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: leftView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: leftView.bottomAnchor)
+        ])
 
-        // Right: Player
+        stackView.addArrangedSubview(listingScrollView)
+
+        buttonPanel = NSView()
+        buttonPanel.translatesAutoresizingMaskIntoConstraints = false
+        buttonPanelHeightConstraint = buttonPanel.heightAnchor.constraint(equalToConstant: buttonPanelHeight)
+        buttonPanelHeightConstraint.isActive = true
+        stackView.addArrangedSubview(buttonPanel)
+
+        addButton = NSButton(title: "+", target: self, action: #selector(showAddField))
+        addButton.translatesAutoresizingMaskIntoConstraints = false
+        buttonPanel.addSubview(addButton)
+
+        removeButton = NSButton(title: "-", target: self, action: #selector(removeEntry))
+        removeButton.translatesAutoresizingMaskIntoConstraints = false
+        buttonPanel.addSubview(removeButton)
+
+        NSLayoutConstraint.activate([
+            addButton.topAnchor.constraint(equalTo: buttonPanel.topAnchor, constant: 8),
+            addButton.leadingAnchor.constraint(equalTo: buttonPanel.leadingAnchor, constant: 8),
+            removeButton.topAnchor.constraint(equalTo: buttonPanel.topAnchor, constant: 8),
+            removeButton.leadingAnchor.constraint(equalTo: addButton.trailingAnchor, constant: 8),
+            removeButton.trailingAnchor.constraint(lessThanOrEqualTo: buttonPanel.trailingAnchor, constant: -8)
+        ])
+
         let rightView = NSView()
         playerView = AVPlayerView()
         playerView.translatesAutoresizingMaskIntoConstraints = false
@@ -85,7 +126,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             playerView.bottomAnchor.constraint(equalTo: rightView.bottomAnchor)
         ])
 
-        // Spinner on player
         spinner = NSProgressIndicator()
         spinner.style = .spinning
         spinner.isHidden = true
@@ -98,13 +138,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
         splitView.addArrangedSubview(leftView)
         splitView.addArrangedSubview(rightView)
-
-        // Set initial frames
-        let totalWidth = splitView.bounds.width
-        let leftWidth = historyPanelWidth
-        let rightWidth = max(100, totalWidth - leftWidth - splitView.dividerThickness)
-        splitView.subviews[0].frame = NSRect(x: 0, y: 0, width: leftWidth, height: splitView.bounds.height)
-        splitView.subviews[1].frame = NSRect(x: leftWidth + splitView.dividerThickness, y: 0, width: rightWidth, height: splitView.bounds.height)
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
@@ -120,8 +153,8 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         cellView.addSubview(cellView.textField!)
         cellView.textField?.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            cellView.textField!.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-            cellView.textField!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
+            cellView.textField!.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: -8),
+            cellView.textField!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: 0),
             cellView.textField!.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
         ])
 
@@ -179,32 +212,28 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
            row >= 0 && row < history.count {
             let url = history[row].url
             (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = row
-            // Save the updated index immediately
             (NSApp.delegate as? AppDelegate)?.saveHistory()
-            tableView.reloadData()
+            listingTableView.reloadData()
+            listingTableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
             playYouTubeURL(url)
         }
     }
 
     @objc func videoDidFinish() {
-        // Clear playing flag since video finished
         UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
         print("🏁 Cleared wasPlayingOnQuit flag (video finished)")
         (NSApp.delegate as? AppDelegate)?.playNextVideo()
     }
 
     func stopPlayback() {
-        // Remove player observers first
         if let player = player {
             player.removeObserver(self, forKeyPath: "rate")
         }
         player?.pause()
         player = nil
         playerView.player = nil
-        // Remove any existing observers
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         print("Video playback stopped")
-        // Clear the playing flag since video is no longer playing
         UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
         print("🛑 Cleared wasPlayingOnQuit flag")
     }
@@ -215,11 +244,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             let oldRate = change?[.oldKey] as? Float ?? 0
 
             if newRate == 0 && oldRate > 0 {
-                // Video was paused
                 UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
                 print("⏸️ Video paused - cleared wasPlayingOnQuit flag")
             } else if newRate > 0 && oldRate == 0 {
-                // Video was resumed from pause
                 UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
                 print("▶️ Video resumed - set wasPlayingOnQuit = true")
             }
@@ -258,7 +285,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         let frame = NSRect(x: x, y: y, width: width, height: height)
         print("📐 Attempting to restore frame: \(frame)")
 
-        // Validate frame is on an active screen
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(frame.origin) }),
            screen.frame.intersects(frame) {
             window?.setFrame(frame, display: true, animate: false)
@@ -300,16 +326,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
     private func replaceContentWithPlayer() {
         guard let contentView = window?.contentView else { return }
 
-        // Store current split view for restoration
         storedSplitView = splitView
-
-        // Remove split view from content view
         splitView.removeFromSuperview()
-
-        // Add player directly to content view
         contentView.addSubview(playerView)
-
-        // Make player fill entire content view
         playerView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             playerView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -318,7 +337,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             playerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
 
-        // Force layout update
         contentView.layoutSubtreeIfNeeded()
     }
 
@@ -326,14 +344,10 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
         guard let contentView = window?.contentView,
               let storedSplitView = storedSplitView else { return }
 
-        // Remove player from content view
         playerView.removeFromSuperview()
-
-        // Restore split view to content view
         contentView.addSubview(storedSplitView)
         splitView = storedSplitView
 
-        // Make split view fill content view
         storedSplitView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             storedSplitView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -342,11 +356,9 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             storedSplitView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
 
-        // Restore player to its original position in split view
         guard let rightView = splitView.arrangedSubviews.last else { return }
         rightView.addSubview(playerView)
 
-        // Restore player constraints in right view
         playerView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             playerView.topAnchor.constraint(equalTo: rightView.topAnchor),
@@ -355,17 +367,14 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             playerView.bottomAnchor.constraint(equalTo: rightView.bottomAnchor)
         ])
 
-        // Clear stored reference
         self.storedSplitView = nil
 
-        // Force layout update
         contentView.layoutSubtreeIfNeeded()
     }
 
     func playYouTubeURL(_ urlString: String) {
         print("playYouTubeURL called with: \(urlString)")
         currentURL = urlString
-        // Remove previous observer
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         guard let url = URL(string: urlString) else {
             print("Invalid URL format: \(urlString)")
@@ -374,7 +383,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
         print("URL validation passed. Host: \(url.host ?? "nil"), Path: \(url.path), Query: \(url.query ?? "nil")")
 
-        // Check if it's a valid YouTube URL
         guard url.host?.contains("youtube.com") == true,
               url.path.contains("/watch") || url.path.contains("/shorts") else {
             print("Not a valid YouTube watch/shorts URL: \(urlString)")
@@ -383,7 +391,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
 
         print("YouTube URL validation passed")
 
-        // Show spinner
         DispatchQueue.main.async {
             self.spinner.isHidden = false
             self.spinner.startAnimation(nil)
@@ -393,7 +400,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
             do {
                 print("Starting YouTube extraction for URL: \(urlString)")
 
-                // First check if we can reach the URL
                 let testRequest = URLRequest(url: url)
                 let (_, response) = try await URLSession.shared.data(for: testRequest)
                 if let httpResponse = response as? HTTPURLResponse {
@@ -413,7 +419,6 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
                     let videoAudioStreams = streams.filterVideoAndAudio()
                     print("Found \(videoAudioStreams.count) video+audio streams")
 
-                    // Prefer HD (720p+) if available, else highest
                     let hdStreams = videoAudioStreams
                         .filter(byResolution: { ($0 ?? 0) >= 720 })
                         .filter { $0.isNativelyPlayable }
@@ -487,5 +492,83 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
                 }
             }
         }
+    }
+
+    @objc func showAddField() {
+        let isShowing = buttonPanelHeightConstraint.constant == buttonPanelHeight
+        buttonPanelHeightConstraint.constant = isShowing ? buttonPanelDeployedHeight : buttonPanelHeight
+        if urlField == nil {
+            urlField = NSTextField()
+            urlField.placeholderString = "Paste YouTube URL here"
+            urlField.translatesAutoresizingMaskIntoConstraints = false
+            buttonPanel.addSubview(urlField)
+
+            submitButton = NSButton(title: "Add", target: self, action: #selector(submitURL))
+            submitButton.translatesAutoresizingMaskIntoConstraints = false
+            buttonPanel.addSubview(submitButton)
+
+            urlFieldConstraints = [
+                urlField.topAnchor.constraint(equalTo: addButton.bottomAnchor, constant: 8),
+                urlField.leadingAnchor.constraint(equalTo: buttonPanel.leadingAnchor, constant: 8),
+                urlField.bottomAnchor.constraint(lessThanOrEqualTo: buttonPanel.bottomAnchor, constant: -8),
+                urlField.trailingAnchor.constraint(lessThanOrEqualTo: submitButton.leadingAnchor, constant: -8)
+            ]
+            submitButtonConstraints = [
+                submitButton.topAnchor.constraint(equalTo: addButton.bottomAnchor, constant: 8),
+                submitButton.leadingAnchor.constraint(equalTo: urlField.trailingAnchor, constant: 8),
+                submitButton.trailingAnchor.constraint(equalTo: buttonPanel.trailingAnchor, constant: -8),
+                submitButton.widthAnchor.constraint(equalToConstant: 50)
+            ]
+        }
+        if isShowing {
+            NSLayoutConstraint.activate(urlFieldConstraints)
+            NSLayoutConstraint.activate(submitButtonConstraints)
+            urlField.isHidden = false
+            submitButton.isHidden = false
+            window?.makeFirstResponder(urlField)
+        } else {
+            NSLayoutConstraint.deactivate(urlFieldConstraints)
+            NSLayoutConstraint.deactivate(submitButtonConstraints)
+            urlField.isHidden = true
+            submitButton.isHidden = true
+        }
+    }
+
+    @objc func submitURL() {
+        let url = urlField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return }
+
+        guard url.contains("youtube.com/watch") || url.contains("youtube.com/shorts") else {
+            let alert = NSAlert()
+            alert.messageText = "Invalid URL"
+            alert.informativeText = "Please enter a valid YouTube watch or shorts URL."
+            alert.runModal()
+            return
+        }
+
+        (NSApp.delegate as? AppDelegate)?.addToHistory(url: url, title: "Loading...")
+
+        NSLayoutConstraint.deactivate(urlFieldConstraints)
+        NSLayoutConstraint.deactivate(submitButtonConstraints)
+        urlField.removeFromSuperview()
+        submitButton.removeFromSuperview()
+        urlField = nil
+        submitButton = nil
+        urlFieldConstraints = []
+        submitButtonConstraints = []
+        buttonPanelHeightConstraint.constant = 40
+    }
+
+    @objc func removeEntry() {
+        let selectedRow = listingTableView.selectedRow
+        guard selectedRow >= 0 else {
+            let alert = NSAlert()
+            alert.messageText = "No Selection"
+            alert.informativeText = "Please select an item to remove."
+            alert.beginSheetModal(for: window!)
+            return
+        }
+
+        (NSApp.delegate as? AppDelegate)?.removeFromHistory(at: selectedRow)
     }
 }
