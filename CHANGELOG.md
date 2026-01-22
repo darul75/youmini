@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-01-22
+
 ### Added
 - Support for YouTube Shorts videos in Chrome tab detection and playback
 - StatusBarManager class for better separation of UI concerns
@@ -22,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.
 ### Changed
 - Improved add URL panel constraint management to prevent minus button shifting when toggling panel
 - Refactored status bar and menu setup into dedicated StatusBarManager class
+- Major code refactoring: moved table view logic to `ListingTableViewController` and player logic to `PlayerViewController` for better separation of concerns
+- Added keyboard shortcuts for menu actions (Cmd+Q to quit, Cmd+T to toggle MiniView, Cmd+O to load playlist, Cmd+S to save playlist)
+- Enhanced table row selection persistence - current index is saved on single-click selection
 
 ## [1.0.1] - 2026-01-21
 
