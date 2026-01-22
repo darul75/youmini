@@ -5,7 +5,17 @@ All notable changes to YouTubeMini will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-01-22
+
+### Added
+- Click-to-pause/resume: Click anywhere on the video area to toggle play/pause
+- Space key play/pause: Press spacebar to toggle playback when video player is active
+- Major code refactoring: Moved all hardcoded strings to centralized `Constants.swift` for better maintainability
+
+### Fixed
+- Status bar menu items not appearing: Fixed menu items not being added to menu and missing targets
+- Menu items appearing disabled: Added proper `target = self` for all menu items
+- Video player controls not working: Fixed click gesture interfering with native AVPlayerView controls by using delegate-based event filtering
 
 ## [1.1.0] - 2026-01-22
 

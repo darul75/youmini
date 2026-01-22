@@ -1,8 +1,9 @@
 import AppKit
 import AVKit
+import AppKit
 @preconcurrency import YouTubeKit
 
-class PlayerViewController: NSViewController {
+class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
     var playerView: AVPlayerView!
     var player: AVPlayer?
     var spinner: NSProgressIndicator!
@@ -10,33 +11,21 @@ class PlayerViewController: NSViewController {
     private var keyMonitor: Any?
     
     override func loadView() {
-        let view = NSView()
-        view.wantsLayer = true
-        
         playerView = AVPlayerView()
         playerView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(playerView)
-        
+
         spinner = NSProgressIndicator()
         spinner.style = .spinning
         spinner.translatesAutoresizingMaskIntoConstraints = false
         spinner.isHidden = true
-        view.addSubview(spinner)
-        
-        NSLayoutConstraint.activate([
-            playerView.topAnchor.constraint(equalTo: view.topAnchor),
-            playerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
-        
-        self.view = view
+        playerView.addSubview(spinner)
 
-        let clickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleVideoClick))
-        playerView.addGestureRecognizer(clickGesture)
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: playerView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: playerView.centerYAnchor)
+        ])
+
+        self.view = playerView
 
         setupNotifications()
     }
@@ -220,10 +209,6 @@ class PlayerViewController: NSViewController {
         }
     }
 
-    @objc private func handleVideoClick(_ gesture: NSClickGestureRecognizer) {
-        togglePlayback()
-    }
-
     private func togglePlayback() {
         guard let player = player else { return }
 
@@ -232,5 +217,9 @@ class PlayerViewController: NSViewController {
         } else {
             player.play()
         }
+    }
+
+    @objc private func handleVideoClick(_ gesture: NSClickGestureRecognizer) {
+        togglePlayback()
     }
 }
