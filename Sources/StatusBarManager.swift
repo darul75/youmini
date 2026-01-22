@@ -190,7 +190,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     self.appDelegate?.saveHistory()
                     self.appDelegate?.reloadListData()
 
-                    self.appDelegate?.appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+                    self.appDelegate?.appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
                     UserDefaults.standard.set(0, forKey: "com.youtube.mini.currentIndex")
                 } catch {
                     let alert = NSAlert()

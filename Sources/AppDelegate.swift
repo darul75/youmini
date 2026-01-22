@@ -42,14 +42,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appWindowController?.showWindow(nil)
 
         if let index = currentPlayingIndex {
-            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
+            appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
         }
 
         startAutoPlayTimer()
     }
 
     @MainActor func reloadListData() {
-        appWindowController?.listingTableView?.reloadData()
+        appWindowController?.listingController.tableView?.reloadData()
     }
 
     @MainActor @objc func toggleWindow() {
@@ -76,7 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if playedHistory.count > 20 {
             playedHistory.removeFirst()
         }
-        appWindowController?.listingTableView?.reloadData()
+        appWindowController?.listingController.tableView?.reloadData()
 
         if playedHistory.count == 1 && currentPlayingIndex == nil {
             currentPlayingIndex = 0
@@ -93,7 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     print("Updating title from '\(title)' to '\(realTitle)'")
                     if let index = playedHistory.firstIndex(where: { $0.url == url }) {
                         playedHistory[index] = (url, realTitle)
-                        appWindowController?.listingTableView?.reloadData()
+                        appWindowController?.listingController.tableView?.reloadData()
                         saveHistory()
                     }
                 }
@@ -143,12 +143,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         saveHistory()
-        appWindowController?.listingTableView?.reloadData()
+        appWindowController?.listingController.tableView?.reloadData()
 
         if let current = currentPlayingIndex {
-            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(integer: current), byExtendingSelection: false)
+            appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(integer: current), byExtendingSelection: false)
         } else {
-            appWindowController?.listingTableView?.selectRowIndexes(IndexSet(), byExtendingSelection: false)
+            appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(), byExtendingSelection: false)
         }
     }
 

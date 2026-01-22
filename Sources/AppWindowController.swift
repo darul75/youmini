@@ -2,10 +2,10 @@ import AppKit
 import AVKit
 @preconcurrency import YouTubeKit
 
-class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
+class AppWindowController: NSWindowController, NSSplitViewDelegate {
     var splitView: NSSplitView!
     var storedSplitView: NSSplitView?
-    var listingTableView: NSTableView!
+    var listingController: ListingTableViewController!
     var playerView: AVPlayerView!
     var spinner: NSProgressIndicator!
     var player: AVPlayer?
@@ -58,25 +58,7 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
         splitView.delegate = self
 
         let leftView = NSView()
-        listingTableView = NSTableView()
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Title"))
-        column.title = "History"
-        column.isEditable = false
-        listingTableView.addTableColumn(column)
-        listingTableView.headerView = nil
-        listingTableView.dataSource = self
-        listingTableView.delegate = self
-        listingTableView.allowsMultipleSelection = false
-        listingTableView.target = self
-        listingTableView.doubleAction = #selector(tableClick)
-        listingTableView.headerView = nil
-
-        let listingScrollView = NSScrollView()
-        listingScrollView.documentView = listingTableView
-        listingScrollView.hasVerticalScroller = true
-        listingScrollView.contentInsets = NSEdgeInsets(top: 0, left: -4, bottom: 0, right: -4)
-        listingScrollView.translatesAutoresizingMaskIntoConstraints = false
-        
+        listingController = ListingTableViewController()
 
         let stackView = NSStackView()
         stackView.orientation = .vertical
@@ -91,7 +73,7 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
             stackView.bottomAnchor.constraint(equalTo: leftView.bottomAnchor)
         ])
 
-        stackView.addArrangedSubview(listingScrollView)
+        stackView.addArrangedSubview(listingController.view)
 
         buttonPanel = NSView()
         buttonPanel.translatesAutoresizingMaskIntoConstraints = false
@@ -140,35 +122,6 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
         splitView.addArrangedSubview(rightView)
     }
 
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let cellView = NSTableCellView()
-        cellView.wantsLayer = true
-        cellView.textField = NSTextField()
-        cellView.textField?.isEditable = false
-        cellView.textField?.isBordered = false
-        cellView.textField?.backgroundColor = .clear
-        cellView.textField?.stringValue = (NSApp.delegate as? AppDelegate)?.playedHistory[row].title ?? ""
-        cellView.textField?.cell?.lineBreakMode = .byTruncatingTail
-        cellView.textField?.cell?.wraps = false
-        cellView.addSubview(cellView.textField!)
-        cellView.textField?.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            cellView.textField!.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: -8),
-            cellView.textField!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: 0),
-            cellView.textField!.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
-        ])
-        
-        if row == (NSApp.delegate as? AppDelegate)?.currentPlayingIndex {
-            cellView.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
-            cellView.textField?.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
-        } else {
-            cellView.layer?.backgroundColor = NSColor.clear.cgColor
-            cellView.textField?.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
-        }
-
-        return cellView
-    }
-
     func splitView(_ splitView: NSSplitView, resizeSubviewsWithOldSize oldSize: NSSize) {
         let dividerThickness = splitView.dividerThickness
         let totalWidth = splitView.bounds.width
@@ -185,38 +138,6 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
 
         splitView.subviews[0].frame = NSRect(x: 0, y: 0, width: newLeftWidth, height: splitView.bounds.height)
         splitView.subviews[1].frame = NSRect(x: newLeftWidth + dividerThickness, y: 0, width: newRightWidth, height: splitView.bounds.height)
-    }
-
-    func numberOfRows(in tableView: NSTableView) -> Int {
-        let count = (NSApp.delegate as? AppDelegate)?.playedHistory.count ?? 0
-        return count
-    }
-
-    func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? {
-        return (NSApp.delegate as? AppDelegate)?.playedHistory[row].title ?? ""
-    }
-
-    func tableViewSelectionDidChange(_ notification: Notification) {
-        guard let tableView = notification.object as? NSTableView, tableView == listingTableView else { return }
-
-        let selectedRow = tableView.selectedRow
-        if selectedRow >= 0 {
-            (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = selectedRow
-            UserDefaults.standard.set(selectedRow, forKey: "com.youtube.mini.currentIndex")
-        }
-    }
-
-    @MainActor @objc func tableClick(_ sender: NSTableView) {
-        let row = sender.clickedRow
-        if let history = (NSApp.delegate as? AppDelegate)?.playedHistory,
-           row >= 0 && row < history.count {
-            let url = history[row].url
-            (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = row
-            (NSApp.delegate as? AppDelegate)?.saveHistory()
-            listingTableView.reloadData()
-            listingTableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-            playYouTubeURL(url)
-        }
     }
 
     @objc func videoDidFinish() {
@@ -298,10 +219,8 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
         isMiniViewMode = enabled
 
         if enabled {
-            // Store current window frame for restoration
             originalWindowFrame = window?.frame
 
-            // Remove title bar completely for true MiniView but keep resizable
             window?.styleMask.remove(.titled)
             window?.styleMask.remove(.closable)
             window?.titleVisibility = .hidden
@@ -309,16 +228,13 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
                 window?.titlebarSeparatorStyle = .none
             }
 
-            // Replace entire content view with player
             replaceContentWithPlayer()
         } else {
-            // Restore title bar and controls
             window?.styleMask.insert(.titled)
             window?.styleMask.insert(.closable)
             window?.styleMask.insert(.resizable)
             window?.titleVisibility = .visible
 
-            // Restore split view content
             restoreSplitViewContent()
         }
     }
@@ -561,7 +477,7 @@ class AppWindowController: NSWindowController, NSTableViewDataSource, NSTableVie
     }
 
     @objc func removeEntry() {
-        let selectedRow = listingTableView.selectedRow
+        let selectedRow = listingController.tableView.selectedRow
         guard selectedRow >= 0 else {
             let alert = NSAlert()
             alert.messageText = "No Selection"
