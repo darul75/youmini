@@ -14,6 +14,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         self.appDelegate = appDelegate
         super.init()
         setupStatusBar()
+        setupGlobalShortcuts()
     }
 
     private func createPlayButtonIcon() -> NSImage {
@@ -29,6 +30,22 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         path.fill()
         image.unlockFocus()
         return image
+    }
+
+    private func setupGlobalShortcuts() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, event.modifierFlags.contains(.command), event.modifierFlags.intersection(.deviceIndependentFlagsMask).isSubset(of: [.command]) else {
+                return event
+            }
+            if event.characters == "s" {
+                self.savePlaylist()
+                return nil
+            } else if event.characters == "o" {
+                self.loadPlaylist()
+                return nil
+            }
+            return event
+        }
     }
 
     private func setupStatusBar() {
@@ -49,16 +66,15 @@ class StatusBarManager: NSObject, NSMenuDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: "s")
+        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: "")
         saveItem.target = self
-        saveItem.keyEquivalentModifierMask = .command
         menu.addItem(saveItem)
 
-        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: "o")
+        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: "")
         loadItem.target = self
-        loadItem.keyEquivalentModifierMask = .command
         menu.addItem(loadItem)
 
+        menu.addItem(NSMenuItem.separator())
         let aboutItem = NSMenuItem(title: "About", action: #selector(forwardShowAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
