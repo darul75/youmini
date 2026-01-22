@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarManager: StatusBarManager?
     var appWindowController: AppWindowController?
     var isMiniViewMode: Bool = false
+    var isDetectionEnabled: Bool = true
     var autoPlayTimer: Timer?
     var playedHistory: [Video] = []
     var currentPlayingIndex: Int?
@@ -22,6 +23,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if isMiniViewMode {
             appWindowController?.toggleMiniView(true)
         }
+
+        isDetectionEnabled = UserDefaults.standard.object(forKey: "com.youtube.mini.detectionEnabled") as? Bool ?? true
 
         let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
         currentPlayingIndex = UserDefaults.standard.integer(forKey: "com.youtube.mini.currentIndex")
@@ -163,7 +166,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startAutoPlayTimer() {
-        autoPlayTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
+        if isDetectionEnabled {
+            autoPlayTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
+        } else {
+            autoPlayTimer?.invalidate()
+            autoPlayTimer = nil
+        }
     }
 
     @objc @MainActor private func timerFired() {

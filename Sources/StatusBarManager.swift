@@ -4,6 +4,7 @@ let SHORTCUT_QUIT = "q"
 let SHORTCUT_LOAD_PLAYLIST = "o"
 let SHORTCUT_SAVE_PLAYLIST = "s"
 let SHORTCUT_TOGGLE_VIEW = "t"
+let SHORTCUT_DETECTION = "d"
 
 struct PlaylistItem: Codable {
     let url: String
@@ -54,6 +55,9 @@ class StatusBarManager: NSObject, NSMenuDelegate {
             } else if event.characters == SHORTCUT_TOGGLE_VIEW {
                 self.toggleMiniView()
                 return nil
+            } else if event.characters == SHORTCUT_DETECTION {
+                self.toggleAutoPlay()
+                return nil
             }
             return event
         }
@@ -84,6 +88,12 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: SHORTCUT_LOAD_PLAYLIST)
         loadItem.target = self
         menu.addItem(loadItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let autoPlayItem = NSMenuItem(title: "Enable Detection", action: #selector(toggleAutoPlay), keyEquivalent: SHORTCUT_DETECTION)
+        autoPlayItem.target = self
+        menu.addItem(autoPlayItem)
 
         menu.addItem(NSMenuItem.separator())
         let aboutItem = NSMenuItem(title: "About", action: #selector(forwardShowAbout), keyEquivalent: "")
@@ -120,6 +130,9 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
             miniViewItem.title = appDelegate?.isMiniViewMode == true ? "Split View" : "Mini View"
         }
+        if let autoPlayItem = menu.items.first(where: { $0.action == #selector(toggleAutoPlay) }) {
+            autoPlayItem.title = appDelegate?.isDetectionEnabled == true ? "Disable Detection" : "Enable Detection"
+        }
     }
 
     @MainActor @objc func toggleMiniView() {
@@ -127,6 +140,14 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         appDelegate.isMiniViewMode.toggle()
         appDelegate.appWindowController?.toggleMiniView(appDelegate.isMiniViewMode)
         UserDefaults.standard.set(appDelegate.isMiniViewMode, forKey: "com.youtube.mini.miniViewMode")
+        updateMenuItems()
+    }
+
+    @MainActor @objc func toggleAutoPlay() {
+        guard let appDelegate = appDelegate else { return }
+        appDelegate.isDetectionEnabled.toggle()
+        UserDefaults.standard.set(appDelegate.isDetectionEnabled, forKey: "com.youtube.mini.detectionEnabled")
+        appDelegate.startAutoPlayTimer()
         updateMenuItems()
     }
 
