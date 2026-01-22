@@ -5,6 +5,11 @@ All notable changes to YouTubeMini will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.0.0.html).
 
+## [1.2.1] - 2026-01-22
+
+### Fixed
+- Video player controls not working: Fixed click gesture interfering with native AVPlayerView controls by using delegate-based event filtering
+
 ## [1.2.0] - 2026-01-22
 
 ### Added
