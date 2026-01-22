@@ -7,6 +7,7 @@ class PlayerViewController: NSViewController {
     var player: AVPlayer?
     var spinner: NSProgressIndicator!
     var currentURL: String?
+    private var keyMonitor: Any?
     
     override func loadView() {
         let view = NSView()
@@ -33,8 +34,31 @@ class PlayerViewController: NSViewController {
         ])
         
         self.view = view
-        
+
+        // Add click gesture for pause/resume
+        let clickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleVideoClick))
+        playerView.addGestureRecognizer(clickGesture)
+
         setupNotifications()
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 49 { // space key
+                self?.togglePlayback()
+                return nil // consume the event
+            }
+            return event
+        }
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
     }
     
     private func setupNotifications() {
@@ -170,10 +194,8 @@ class PlayerViewController: NSViewController {
         player?.pause()
         player = nil
         playerView.player = nil
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
-        print("Video playback stopped")
-        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
-        print("🛑 Cleared wasPlayingOnQuit flag")
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)        
+        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")        
     }
     
     func showSpinner() {
@@ -187,8 +209,7 @@ class PlayerViewController: NSViewController {
     }
     
     @objc func videoDidFinish() {
-        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
-        print("🏁 Cleared wasPlayingOnQuit flag (video finished)")
+        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")        
         (NSApp.delegate as? AppDelegate)?.playNextVideo()
     }
 
@@ -198,20 +219,23 @@ class PlayerViewController: NSViewController {
             let oldRate = change?[.oldKey] as? Float ?? 0
             if newRate == 0 && oldRate > 0 {
                 UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
-                print("⏸️ Video paused - cleared wasPlayingOnQuit flag")
             } else if newRate > 0 && oldRate == 0 {
-                UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
-                print("▶️ Video resumed - set wasPlayingOnQuit = true")
+                UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")                
             }
         }
     }
-    
-    func replaceContentWithPlayer() {
-        // This might need to be handled by the parent controller
-        // Since mini-view affects the whole window
+
+    @objc private func handleVideoClick(_ gesture: NSClickGestureRecognizer) {
+        togglePlayback()
     }
-    
-    func restoreSplitViewContent() {
-        // This might need to be handled by the parent controller
+
+    private func togglePlayback() {
+        guard let player = player else { return }
+
+        if player.rate > 0 {
+            player.pause()
+        } else {
+            player.play()
+        }
     }
 }
