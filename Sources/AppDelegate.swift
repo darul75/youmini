@@ -17,7 +17,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         image.lockFocus()
         NSColor.black.setFill()
         let path = NSBezierPath()
-        // Draw larger play triangle: points at (2,2), (2,14), (13,8) for better visibility
         path.move(to: NSPoint(x: 2, y: 2))
         path.line(to: NSPoint(x: 2, y: 14))
         path.line(to: NSPoint(x: 13, y: 8))
@@ -28,14 +27,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Create status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.image = createPlayButtonIcon()
             button.image?.isTemplate = true
         }
 
-        // Create menu
         let menu = NSMenu()
         let openItem = NSMenuItem(title: "Open Window", action: #selector(toggleWindow), keyEquivalent: "")
         openItem.target = self
@@ -57,7 +54,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
-        // Set up main menu for standard About panel
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu(title: "YouTubeMini")
@@ -68,28 +64,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         mainMenu.addItem(appMenuItem)
         NSApplication.shared.mainMenu = mainMenu
 
-        // Create window controller
         windowController = WindowController()
 
-        // Restore window frame before showing
         print("🚀 App launch, restoring window frame...")
         windowController?.restoreWindowFrame()
 
-        // Load persisted history first
         loadPersistedHistory()
 
-        // Load MiniView mode
         isMiniViewMode = UserDefaults.standard.bool(forKey: "com.youtube.mini.miniViewMode")
         if isMiniViewMode {
-            // Update menu title for persisted mode
             if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
                 miniViewItem.title = "Split View"
             }
-            // Apply the MiniView mode to the window
             windowController?.toggleMiniView(true)
         }
 
-        // Auto-resume if video was playing when app quit
         let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
         print("🚀 App launch - currentPlayingIndex: \(currentPlayingIndex ?? -1), wasPlayingFlag: \(wasPlayingFlag), historyCount: \(playedHistory.count)")
 
@@ -97,16 +86,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
            wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
             print("🎬 Auto-resuming video that was playing when app quit: \(videoURL)")
-            windowController?.listingTableView?.reloadData()  // Highlight current video
+            windowController?.listingTableView?.reloadData()
             windowController?.playYouTubeURL(videoURL)
-            // Clear the flag after auto-playing (one-time only)
             UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
             print("✅ Cleared wasPlayingOnQuit flag after auto-resume")
         } else {
             print("❌ Not auto-resuming: index=\(currentPlayingIndex ?? -1), flag=\(wasPlayingFlag), count=\(playedHistory.count)")
         }
 
-        // Then populate history with existing YouTube tabs
         let tabs = ChromeHelper.getYouTubeTabs()
         for tab in tabs {
             addToHistory(url: tab.url, title: tab.title)
@@ -114,19 +101,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         windowController?.showWindow(nil)
 
-        // Set initial menu title to Hide Window since window is shown
         if let openItem = menu.items.first(where: { $0.action == #selector(toggleWindow) }) {
             openItem.title = "Hide Window"
         }
 
-        // Auto-play if only one video in history
         if playedHistory.count == 1 {
             currentPlayingIndex = 0
             windowController?.listingTableView?.reloadData()
             windowController?.playYouTubeURL(playedHistory[0].url)
         }
 
-        // Start auto-play timer
         startAutoPlayTimer()
     }
 

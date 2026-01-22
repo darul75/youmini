@@ -373,6 +373,7 @@ class WindowController: NSWindowController, NSTableViewDataSource, NSTableViewDe
     }
 
     func playYouTubeURL(_ urlString: String) {
+        stopPlayback()
         print("playYouTubeURL called with: \(urlString)")
         currentURL = urlString
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)

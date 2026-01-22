@@ -8,7 +8,7 @@ class ChromeHelper {
             set resultList to ""
             repeat with w in windows
                 repeat with t in tabs of w
-                    if URL of t contains "youtube.com/watch" then
+                    if URL of t contains "youtube.com/watch" or URL of t contains "youtube.com/shorts" then
                         set resultList to resultList & (URL of t) & "|" & (title of t) & ";"
                     end if
                 end repeat
