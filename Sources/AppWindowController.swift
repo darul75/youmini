@@ -138,12 +138,12 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
             "width": frame.size.width,
             "height": frame.size.height
         ]
-        UserDefaults.standard.set(frameDict, forKey: "com.youtube.mini.windowFrame")
+        UserDefaults.standard.set(frameDict, forKey: Constants.UserDefaultsKeys.windowFrame)
         print("✅ Saved window frame: \(frame)")
     }
 
     func restoreWindowFrame() {
-        guard let frameDict = UserDefaults.standard.dictionary(forKey: "com.youtube.mini.windowFrame") as? [String: CGFloat] else {
+        guard let frameDict = UserDefaults.standard.dictionary(forKey: Constants.UserDefaultsKeys.windowFrame) as? [String: CGFloat] else {
             print("❌ No saved window frame dictionary found")
             return
         }
@@ -246,11 +246,11 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         buttonPanelHeightConstraint.constant = isShowing ? buttonPanelDeployedHeight : buttonPanelHeight
         if urlField == nil {
             urlField = NSTextField()
-            urlField.placeholderString = "Paste YouTube URL here"
+            urlField.placeholderString = Constants.UI.Placeholders.youtubeURL
             urlField.translatesAutoresizingMaskIntoConstraints = false
             buttonPanel.addSubview(urlField)
 
-            submitButton = NSButton(title: "Add", target: self, action: #selector(submitURL))
+            submitButton = NSButton(title: Constants.UI.Buttons.add, target: self, action: #selector(submitURL))
             submitButton.translatesAutoresizingMaskIntoConstraints = false
             buttonPanel.addSubview(submitButton)
 
@@ -287,13 +287,13 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         guard url.contains("youtube.com/watch") || url.contains("youtube.com/shorts") else {
             let alert = NSAlert()
-            alert.messageText = "Invalid URL"
-            alert.informativeText = "Please enter a valid YouTube watch or shorts URL."
+            alert.messageText = Constants.Alerts.Messages.invalidURL
+            alert.informativeText = Constants.Alerts.Descriptions.validYouTubeURL
             alert.runModal()
             return
         }
 
-        (NSApp.delegate as? AppDelegate)?.addToHistory(url: url, title: "Loading...")
+        (NSApp.delegate as? AppDelegate)?.addToHistory(url: url, title: Constants.UI.Status.loading)
 
         NSLayoutConstraint.deactivate(urlFieldConstraints)
         NSLayoutConstraint.deactivate(submitButtonConstraints)
@@ -310,8 +310,8 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         let selectedRow = listingController.tableView.selectedRow
         guard selectedRow >= 0 else {
             let alert = NSAlert()
-            alert.messageText = "No Selection"
-            alert.informativeText = "Please select an item to remove."
+            alert.messageText = Constants.Alerts.Messages.noSelection
+            alert.informativeText = Constants.Alerts.Descriptions.selectItemToRemove
             alert.beginSheetModal(for: window!)
             return
         }

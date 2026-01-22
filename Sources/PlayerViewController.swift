@@ -35,7 +35,6 @@ class PlayerViewController: NSViewController {
         
         self.view = view
 
-        // Add click gesture for pause/resume
         let clickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleVideoClick))
         playerView.addGestureRecognizer(clickGesture)
 
@@ -45,9 +44,9 @@ class PlayerViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 49 { // space key
+            if event.keyCode == 49 {
                 self?.togglePlayback()
-                return nil // consume the event
+                return nil
             }
             return event
         }
@@ -128,21 +127,17 @@ class PlayerViewController: NSViewController {
 
                     let stream = hdStream ?? fallbackStreams.highestResolutionStream()
                     print("Final selected stream: \(stream != nil ? "YES" : "NO")")
-                if let stream {
-                    print("Stream URL: \(stream.url)")
-                    player = AVPlayer(url: stream.url)
-                    playerView.player = player
-                    // Add observer for end of video
-                    NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
-                    // Add observer for play/pause changes
-                    player?.addObserver(self, forKeyPath: "rate", options: [.new, .old], context: nil)
-                    player?.play()
-                    print("Started playing video")
-                    // Mark that video is now playing
-                    UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
-                    print("🎬 Set wasPlayingOnQuit = true")
-                        }
-                    // Hide spinner
+                    if let stream {
+                        print("Stream URL: \(stream.url)")
+                        player = AVPlayer(url: stream.url)
+                        playerView.player = player
+                        NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+                        player?.addObserver(self, forKeyPath: "rate", options: [.new, .old], context: nil)
+                        player?.play()
+                        print("Started playing video")
+                        UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
+                        print("🎬 Set wasPlayingOnQuit = true")
+                    }
                     hideSpinner()
                 }
             } catch {
@@ -194,8 +189,8 @@ class PlayerViewController: NSViewController {
         player?.pause()
         player = nil
         playerView.player = nil
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)        
-        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")        
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
     }
     
     func showSpinner() {
@@ -209,7 +204,7 @@ class PlayerViewController: NSViewController {
     }
     
     @objc func videoDidFinish() {
-        UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")        
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)        
         (NSApp.delegate as? AppDelegate)?.playNextVideo()
     }
 
@@ -218,7 +213,7 @@ class PlayerViewController: NSViewController {
             let newRate = change?[.newKey] as? Float ?? 0
             let oldRate = change?[.oldKey] as? Float ?? 0
             if newRate == 0 && oldRate > 0 {
-                UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+                UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
             } else if newRate > 0 && oldRate == 0 {
                 UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")                
             }

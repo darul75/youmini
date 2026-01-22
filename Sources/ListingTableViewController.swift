@@ -16,7 +16,7 @@ class ListingTableViewController: NSViewController, NSTableViewDataSource, NSTab
         tableView.headerView = nil
         
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Title"))
-        column.title = "History"
+        column.title = Constants.UI.Table.historyColumn
         column.width = 200
         tableView.addTableColumn(column)
         
@@ -67,7 +67,7 @@ class ListingTableViewController: NSViewController, NSTableViewDataSource, NSTab
         let selectedRow = tableView.selectedRow
         if selectedRow >= 0 {
             (NSApp.delegate as? AppDelegate)?.currentPlayingIndex = selectedRow
-            UserDefaults.standard.set(selectedRow, forKey: "com.youtube.mini.currentIndex")
+            UserDefaults.standard.set(selectedRow, forKey: Constants.UserDefaultsKeys.currentIndex)
         }
     }
     

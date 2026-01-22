@@ -1,10 +1,6 @@
 import AppKit
 
-let SHORTCUT_QUIT = "q"
-let SHORTCUT_LOAD_PLAYLIST = "o"
-let SHORTCUT_SAVE_PLAYLIST = "s"
-let SHORTCUT_TOGGLE_VIEW = "t"
-let SHORTCUT_DETECTION = "d"
+// Shortcuts are now defined in Constants.Shortcuts
 
 struct PlaylistItem: Codable {
     let url: String
@@ -43,21 +39,16 @@ class StatusBarManager: NSObject, NSMenuDelegate {
             guard let self = self, event.modifierFlags.contains(.command), event.modifierFlags.intersection(.deviceIndependentFlagsMask).isSubset(of: [.command]) else {
                 return event
             }
-            if event.characters == SHORTCUT_SAVE_PLAYLIST {
-                self.savePlaylist()
-                return nil
-            } else if event.characters == SHORTCUT_LOAD_PLAYLIST {
-                self.loadPlaylist()
-                return nil
-            } else if event.characters == SHORTCUT_QUIT {
-                self.forwardQuitApp()
-                return nil
-            } else if event.characters == SHORTCUT_TOGGLE_VIEW {
-                self.toggleMiniView()
-                return nil
-            } else if event.characters == SHORTCUT_DETECTION {
-                self.toggleAutoPlay()
-                return nil
+            if event.characters == Constants.Shortcuts.savePlaylist {
+                savePlaylist()
+            } else if event.characters == Constants.Shortcuts.loadPlaylist {
+                loadPlaylist()
+            } else if event.characters == Constants.Shortcuts.quit {
+                appDelegate?.quitApp()
+            } else if event.characters == Constants.Shortcuts.toggleView {
+                toggleMiniView()
+            } else if event.characters == Constants.Shortcuts.detection {
+                toggleAutoPlay()
             }
             return event
         }
@@ -71,39 +62,33 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         }
 
         let menu = NSMenu()
-        let openItem = NSMenuItem(title: "Open Window", action: #selector(forwardToggleWindow), keyEquivalent: "")
-        openItem.target = self
+        let openItem = NSMenuItem(title: Constants.UI.Menu.openWindow, action: #selector(forwardToggleWindow), keyEquivalent: "")
+        let miniViewItem = NSMenuItem(title: Constants.UI.Menu.miniView, action: #selector(toggleMiniView), keyEquivalent: Constants.Shortcuts.toggleView)
+        let saveItem = NSMenuItem(title: Constants.UI.Menu.savePlaylist, action: #selector(savePlaylist), keyEquivalent: Constants.Shortcuts.savePlaylist)
+        let loadItem = NSMenuItem(title: Constants.UI.Menu.loadPlaylist, action: #selector(loadPlaylist), keyEquivalent: Constants.Shortcuts.loadPlaylist)
+        let autoDetectionItem = NSMenuItem(title: Constants.UI.Menu.enableDetection, action: #selector(toggleAutoPlay), keyEquivalent: Constants.Shortcuts.detection)
+        let aboutItem = NSMenuItem(title: Constants.UI.Menu.about, action: #selector(forwardShowAbout), keyEquivalent: "")
+        let quitItem = NSMenuItem(title: Constants.UI.Menu.quit, action: #selector(forwardQuitApp), keyEquivalent: Constants.Shortcuts.quit)
+
         menu.addItem(openItem)
-
-        let miniViewItem = NSMenuItem(title: "Mini View", action: #selector(toggleMiniView), keyEquivalent: SHORTCUT_TOGGLE_VIEW)
-        miniViewItem.target = self
         menu.addItem(miniViewItem)
-
         menu.addItem(NSMenuItem.separator())
-
-        let saveItem = NSMenuItem(title: "Save Playlist...", action: #selector(savePlaylist), keyEquivalent: SHORTCUT_SAVE_PLAYLIST)
-        saveItem.target = self
         menu.addItem(saveItem)
-
-        let loadItem = NSMenuItem(title: "Load Playlist...", action: #selector(loadPlaylist), keyEquivalent: SHORTCUT_LOAD_PLAYLIST)
-        loadItem.target = self
         menu.addItem(loadItem)
-
         menu.addItem(NSMenuItem.separator())
-
-        let autoPlayItem = NSMenuItem(title: "Enable Detection", action: #selector(toggleAutoPlay), keyEquivalent: SHORTCUT_DETECTION)
-        autoPlayItem.target = self
-        menu.addItem(autoPlayItem)
-
+        menu.addItem(autoDetectionItem)
         menu.addItem(NSMenuItem.separator())
-        let aboutItem = NSMenuItem(title: "About", action: #selector(forwardShowAbout), keyEquivalent: "")
-        aboutItem.target = self
         menu.addItem(aboutItem)
-
         menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(forwardQuitApp), keyEquivalent: SHORTCUT_QUIT)
-        quitItem.target = self
         menu.addItem(quitItem)
+
+        openItem.target = self
+        miniViewItem.target = self
+        saveItem.target = self
+        loadItem.target = self
+        autoDetectionItem.target = self
+        aboutItem.target = self
+        quitItem.target = self
 
         menu.delegate = self
         statusItem.menu = menu
@@ -111,9 +96,9 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu(title: "YouTubeMini")
-        appMenu.addItem(withTitle: "About YouTubeMini", action: #selector(forwardShowAbout), keyEquivalent: "")
+        appMenu.addItem(withTitle: Constants.UI.Menu.aboutApp, action: #selector(forwardShowAbout), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit YouTubeMini", action: #selector(forwardQuitApp), keyEquivalent: SHORTCUT_QUIT)
+        appMenu.addItem(withTitle: Constants.UI.Menu.quitApp, action: #selector(forwardQuitApp), keyEquivalent: Constants.Shortcuts.quit)
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
         NSApplication.shared.mainMenu = mainMenu
@@ -125,13 +110,13 @@ class StatusBarManager: NSObject, NSMenuDelegate {
         guard let menu = statusItem.menu else { return }
         if let openItem = menu.items.first(where: { $0.action == #selector(forwardToggleWindow) }) {
             let isVisible = appDelegate?.appWindowController?.window?.isVisible == true
-            openItem.title = isVisible ? "Hide Window" : "Show Window"
+            openItem.title = isVisible ? Constants.UI.Menu.hideWindow : Constants.UI.Menu.showWindow
         }
         if let miniViewItem = menu.items.first(where: { $0.action == #selector(toggleMiniView) }) {
-            miniViewItem.title = appDelegate?.isMiniViewMode == true ? "Split View" : "Mini View"
+            miniViewItem.title = appDelegate?.isMiniViewMode == true ? Constants.UI.Menu.splitView : Constants.UI.Menu.miniView
         }
         if let autoPlayItem = menu.items.first(where: { $0.action == #selector(toggleAutoPlay) }) {
-            autoPlayItem.title = appDelegate?.isDetectionEnabled == true ? "Disable Detection" : "Enable Detection"
+            autoPlayItem.title = appDelegate?.isDetectionEnabled == true ? Constants.UI.Menu.disableDetection : Constants.UI.Menu.enableDetection
         }
     }
 
@@ -170,8 +155,8 @@ class StatusBarManager: NSObject, NSMenuDelegate {
     @objc func savePlaylist() {
         guard let history = appDelegate?.playedHistory, !history.isEmpty else {
             let alert = NSAlert()
-            alert.messageText = "No Playlist to Save"
-            alert.informativeText = "The playlist is empty."
+            alert.messageText = Constants.Alerts.Messages.noPlaylistToSave
+            alert.informativeText = Constants.Alerts.Descriptions.playlistEmpty
             alert.beginSheetModal(for: appDelegate?.appWindowController?.window ?? NSApplication.shared.mainWindow!)
             return
         }
@@ -188,7 +173,7 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     try data.write(to: url)
                 } catch {
                     let alert = NSAlert()
-                    alert.messageText = "Save Failed"
+                    alert.messageText = Constants.Alerts.Messages.saveFailed
                     alert.informativeText = "Could not save playlist: \(error.localizedDescription)"
                     alert.beginSheetModal(for: window)
                 }
@@ -212,10 +197,10 @@ class StatusBarManager: NSObject, NSMenuDelegate {
                     self.appDelegate?.reloadListData()
 
                     self.appDelegate?.appWindowController?.listingController.tableView?.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
-                    UserDefaults.standard.set(0, forKey: "com.youtube.mini.currentIndex")
+                    UserDefaults.standard.set(0, forKey: Constants.UserDefaultsKeys.currentIndex)
                 } catch {
                     let alert = NSAlert()
-                    alert.messageText = "Load Failed"
+                    alert.messageText = Constants.Alerts.Messages.loadFailed
                     alert.informativeText = "Could not load playlist: \(error.localizedDescription)"
                     alert.beginSheetModal(for: window)
                 }

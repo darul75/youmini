@@ -19,22 +19,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         loadPersistedHistory()
 
-        isMiniViewMode = UserDefaults.standard.bool(forKey: "com.youtube.mini.miniViewMode")
-        if isMiniViewMode {
-            appWindowController?.toggleMiniView(true)
-        }
-
-        isDetectionEnabled = UserDefaults.standard.object(forKey: "com.youtube.mini.detectionEnabled") as? Bool ?? true
-
-        let wasPlayingFlag = UserDefaults.standard.bool(forKey: "com.youtube.mini.wasPlayingOnQuit")
-        currentPlayingIndex = UserDefaults.standard.integer(forKey: "com.youtube.mini.currentIndex")
+        isMiniViewMode = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.miniViewMode)
+        isDetectionEnabled = UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.detectionEnabled) as? Bool ?? true
+        let wasPlayingFlag = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
+        currentPlayingIndex = UserDefaults.standard.integer(forKey: Constants.UserDefaultsKeys.currentIndex)
 
         if let index = currentPlayingIndex, index < playedHistory.count,
             wasPlayingFlag == true {
             let videoURL = playedHistory[index].url
             reloadListData()
             appWindowController?.playerController.playYouTubeURL(videoURL)
-            UserDefaults.standard.removeObject(forKey: "com.youtube.mini.wasPlayingOnQuit")
+            UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
         }
 
         let tabs = ChromeHelper.getYouTubeTabs()
@@ -108,12 +103,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func saveHistory() {
         let historyData = playedHistory.map { ["url": $0.url, "title": $0.title] }
-        UserDefaults.standard.set(historyData, forKey: "com.youtube.mini.history")
-        UserDefaults.standard.set(currentPlayingIndex, forKey: "com.youtube.mini.currentIndex")
+        UserDefaults.standard.set(historyData, forKey: Constants.UserDefaultsKeys.history)
+        UserDefaults.standard.set(currentPlayingIndex, forKey: Constants.UserDefaultsKeys.currentIndex)
     }
 
     @MainActor private func loadPersistedHistory() {
-        guard let historyData = UserDefaults.standard.array(forKey: "com.youtube.mini.history") as? [[String: String]],
+        guard let historyData = UserDefaults.standard.array(forKey: Constants.UserDefaultsKeys.history) as? [[String: String]],
             !historyData.isEmpty else {
             return
         }
