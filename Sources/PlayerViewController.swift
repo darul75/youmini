@@ -59,7 +59,6 @@ class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
     
     func playYouTubeURL(_ urlString: String) {
         stopPlayback()
-        print("playYouTubeURL called with: \(urlString)")
         currentURL = urlString
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         guard let url = URL(string: urlString) else {
@@ -75,14 +74,10 @@ class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
             return
         }
 
-        print("YouTube URL validation passed")
-
         showSpinner()
 
         Task {
             do {
-                print("Starting YouTube extraction for URL: \(urlString)")
-
                 let testRequest = URLRequest(url: url)
                 let (_, response) = try await URLSession.shared.data(for: testRequest)
                 if let httpResponse = response as? HTTPURLResponse {
@@ -91,41 +86,26 @@ class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
                         print("HTTP error: Status code \(httpResponse.statusCode)")
                     }
                 }
-
-                print("Creating YouTubeKit YouTube object...")
-                let youTube = YouTube(url: url)
-                print("YouTube object created, fetching streams...")
+                
+                let youTube = YouTube(url: url, methods: [.local, .remote(serverURL: URL(string: "ws://localhost:8787")!)])                
                 let streams = try await youTube.streams
-                print("Successfully extracted \(streams.count) streams")
                 await MainActor.run {
-                    print("Processing \(streams.count) total streams")
                     let videoAudioStreams = streams.filterVideoAndAudio()
-                    print("Found \(videoAudioStreams.count) video+audio streams")
-
                     let hdStreams = videoAudioStreams
                         .filter(byResolution: { ($0 ?? 0) >= 720 })
                         .filter { $0.isNativelyPlayable }
-                    print("Found \(hdStreams.count) HD (720p+) natively playable streams")
-
                     let hdStream = hdStreams.highestResolutionStream()
-                    print("Selected HD stream: \(hdStream != nil ? "YES" : "NO")")
-
                     let fallbackStreams = streams.filterVideoAndAudio()
                         .filter { $0.isNativelyPlayable }
-                    print("Found \(fallbackStreams.count) fallback natively playable streams")
 
-                    let stream = hdStream ?? fallbackStreams.highestResolutionStream()
-                    print("Final selected stream: \(stream != nil ? "YES" : "NO")")
+                    let stream = hdStream ?? fallbackStreams.highestResolutionStream()                    
                     if let stream {
-                        print("Stream URL: \(stream.url)")
                         player = AVPlayer(url: stream.url)
                         playerView.player = player
                         NotificationCenter.default.addObserver(self, selector: #selector(videoDidFinish), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
                         player?.addObserver(self, forKeyPath: "rate", options: [.new, .old], context: nil)
                         player?.play()
-                        print("Started playing video")
                         UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
-                        print("🎬 Set wasPlayingOnQuit = true")
                     }
                     hideSpinner()
                 }
@@ -204,7 +184,7 @@ class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
             if newRate == 0 && oldRate > 0 {
                 UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.wasPlayingOnQuit)
             } else if newRate > 0 && oldRate == 0 {
-                UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")                
+                UserDefaults.standard.set(true, forKey: "com.youtube.mini.wasPlayingOnQuit")
             }
         }
     }

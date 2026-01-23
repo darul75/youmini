@@ -13,6 +13,7 @@ A sleek macOS menu bar app that detects YouTube videos playing in Chrome and pro
 - 🖥️ **Window position memory** - Remembers window size and position
 - 🎯 **Accurate titles** - Fetches real YouTube video titles
 - 🔇 **Smart audio management** - Stops playback when window is hidden
+- 🛡️ **Local Server Fallback** - Run YouTubeKit-Server locally for enhanced reliability when YouTube changes their API
 
 ## Installation
 
@@ -30,6 +31,27 @@ A sleek macOS menu bar app that detects YouTube videos playing in Chrome and pro
 The app requires automation permissions to detect YouTube tabs:
 - **System Preferences** → **Security & Privacy** → **Privacy** → **Automation**
 - Enable YouTubeMini for **Google Chrome**
+
+### Optional: Local Server Fallback
+
+For enhanced reliability when YouTube changes their API, you can run a local YouTubeKit-Server instance as a fallback:
+
+1. **Clone and setup the server:**
+   ```bash
+   git clone https://github.com/alexeichhorn/YouTubeKit-Server.git
+   cd YouTubeKit-Server
+   npm install
+   ```
+
+2. **Run the server locally:**
+   ```bash
+   npm run dev
+   ```
+   Server will run at `http://localhost:8787`
+
+3. **Configure the app** to connect to your local server (implementation details in development documentation)
+
+This provides an additional layer of reliability when YouTube's API changes break local extraction.
 
 ## Usage
 
