@@ -8,7 +8,7 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
     var listingController: ListingTableViewController!
     var playerController: PlayerViewController!
     let historyPanelWidth: CGFloat = 200
-    let collapsedPanelWidth: CGFloat = 50
+    let collapsedPanelWidth: CGFloat = 0
     let buttonPanelHeight: CGFloat = 40
     let buttonPanelDeployedHeight: CGFloat = 80
     var isMiniViewMode: Bool = false
@@ -31,6 +31,8 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
                             defer: false)
         mainPanel.level = .floating
         mainPanel.isMovableByWindowBackground = true
+
+        mainPanel.title = Constants.appName
 
         if let screen = NSScreen.main {
             let screenFrame = screen.frame
@@ -130,7 +132,7 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         let totalWidth = splitView.bounds.width
 
         let leftWidth = splitView.subviews[0].frame.width
-        let minWidth = isLeftPanelCollapsed ? collapsedPanelWidth : historyPanelWidth
+        let minWidth = isLeftPanelCollapsed ? 0 : historyPanelWidth
         var newLeftWidth = max(minWidth, leftWidth)
 
         if oldSize.width > totalWidth && leftWidth < minWidth {
@@ -142,7 +144,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         splitView.subviews[0].frame = NSRect(x: 0, y: 0, width: newLeftWidth, height: splitView.bounds.height)
         splitView.subviews[1].frame = NSRect(x: newLeftWidth + dividerThickness, y: 0, width: newRightWidth, height: splitView.bounds.height)
-
     }
 
     func splitViewDidResizeSubviews(_ notification: Notification) {

@@ -1,4 +1,6 @@
 struct Constants {
+    static let appName = "YouMini"
+
     struct UI {
         struct Menu {
             static let openWindow = "Open Window"

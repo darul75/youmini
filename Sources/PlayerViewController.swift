@@ -98,7 +98,7 @@ class PlayerViewController: NSViewController, NSGestureRecognizerDelegate {
                     let fallbackStreams = streams.filterVideoAndAudio()
                         .filter { $0.isNativelyPlayable }
 
-                    let stream = hdStream ?? fallbackStreams.highestResolutionStream()                    
+                    let stream = hdStream ?? fallbackStreams.highestResolutionStream()
                     if let stream {
                         player = AVPlayer(url: stream.url)
                         playerView.player = player
