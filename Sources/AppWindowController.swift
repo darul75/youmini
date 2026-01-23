@@ -193,6 +193,9 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         if enabled {
             originalWindowFrame = window?.frame
 
+            // Hide toggle button in MiniView mode
+            toggleButton.isHidden = true
+
             window?.styleMask.remove(.titled)
             window?.styleMask.remove(.closable)
             window?.titleVisibility = .hidden
@@ -208,6 +211,15 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
             window?.titleVisibility = .visible
 
             restoreSplitViewContent()
+
+            // Show toggle button and ensure split view is expanded
+            toggleButton.isHidden = false
+            // Reset split view to expanded state when returning from MiniView
+            splitView.setPosition(historyPanelWidth, ofDividerAt: 0)
+            isLeftPanelCollapsed = false
+            toggleButton.title = Constants.UI.Buttons.toggleCollapse
+            toggleButton.toolTip = Constants.UI.Tooltips.toggleCollapse
+            updateToggleButtonPosition()
         }
     }
 
