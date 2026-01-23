@@ -192,8 +192,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         if enabled {
             originalWindowFrame = window?.frame
-
-            // Hide toggle button in MiniView mode
             toggleButton.isHidden = true
 
             window?.styleMask.remove(.titled)
@@ -212,9 +210,13 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
             restoreSplitViewContent()
 
-            // Show toggle button and ensure split view is expanded
             toggleButton.isHidden = false
-            // Reset split view to expanded state when returning from MiniView
+            toggleButton.target = self
+            toggleButton.action = #selector(toggleLeftPanel)
+            toggleButton.isEnabled = true
+            if let contentView = window?.contentView {
+                contentView.addSubview(toggleButton)
+            }
             splitView.setPosition(historyPanelWidth, ofDividerAt: 0)
             isLeftPanelCollapsed = false
             toggleButton.title = Constants.UI.Buttons.toggleCollapse
@@ -383,12 +385,14 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         let dividerX = leftPanelFrame.maxX + splitView.dividerThickness / 2
         let centerY = contentView.bounds.midY
 
-        toggleButton.frame = NSRect(
-            x: dividerX - 10,
-            y: centerY - 10,
-            width: 20,
-            height: 20
+        let buttonFrame = NSRect(
+            x: dividerX - 12,
+            y: centerY - 12,
+            width: 24,
+            height: 24
         )
+
+        toggleButton.frame = buttonFrame
     }
 
     func restorePanelState() {

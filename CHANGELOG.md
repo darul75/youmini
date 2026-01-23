@@ -5,6 +5,18 @@ All notable changes to YouTubeMini will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/spec2.0.0.html).
 
+## [1.3.0] - 2026-01-23
+
+### Added
+- **Split View Toggle Button**: Added collapsible left panel with toggle button in divider area for quick video space maximization
+- **Window Title**: Added proper "YouTubeMini" title to main window instead of empty title bar
+- **Button Tooltips**: Added descriptive tooltips for all main buttons (add, remove, toggle panel)
+- **Improved Error Handling**: Enhanced YouTubeKit error logging for better diagnostics
+
+### Changed
+- **Centralized Constants**: Moved all button labels and tooltips to Constants file for better maintainability
+- **UI Polish**: Improved user experience with better visual feedback and accessibility
+
 ## [Unreleased]
 
 ### Added

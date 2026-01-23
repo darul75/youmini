@@ -13,6 +13,7 @@ A sleek macOS menu bar app that detects YouTube videos playing in Chrome and pro
 - 🖥️ **Window position memory** - Remembers window size and position
 - 🎯 **Accurate titles** - Fetches real YouTube video titles
 - 🔇 **Smart audio management** - Stops playback when window is hidden
+- 📐 **Collapsible Panel** - Toggle button in divider to collapse/expand playlist for full video focus
 - 🛡️ **Local Server Fallback** - Run YouTubeKit-Server locally for enhanced reliability when YouTube changes their API
 
 ## Installation
