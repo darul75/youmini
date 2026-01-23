@@ -1,7 +1,5 @@
 import AppKit
 
-// Shortcuts are now defined in Constants.Shortcuts
-
 struct PlaylistItem: Codable {
     let url: String
     let title: String

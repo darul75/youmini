@@ -20,6 +20,8 @@ struct Constants {
             static let addSymbol = "+"
             static let removeSymbol = "-"
             static let add = "Add"
+            static let toggleCollapse = "◀"
+            static let toggleExpand = "▶"
         }
         
         struct Placeholders {
@@ -32,6 +34,11 @@ struct Constants {
         
         struct Status {
             static let loading = "Loading..."
+        }
+
+        struct Tooltips {
+            static let toggleCollapse = "Collapse left panel"
+            static let toggleExpand = "Expand left panel"
         }
     }
     
@@ -66,5 +73,6 @@ struct Constants {
         static let currentIndex = "com.youtube.mini.currentIndex"
         static let history = "com.youtube.mini.history"
         static let windowFrame = "com.youtube.mini.windowFrame"
+        static let leftPanelCollapsed = "com.youtube.mini.leftPanelCollapsed"
     }
 }

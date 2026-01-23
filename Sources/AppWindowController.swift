@@ -8,12 +8,15 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
     var listingController: ListingTableViewController!
     var playerController: PlayerViewController!
     let historyPanelWidth: CGFloat = 200
+    let collapsedPanelWidth: CGFloat = 50
     let buttonPanelHeight: CGFloat = 40
     let buttonPanelDeployedHeight: CGFloat = 80
     var isMiniViewMode: Bool = false
+    var isLeftPanelCollapsed: Bool = false
     var originalWindowFrame: NSRect?
     var addButton: NSButton!
     var removeButton: NSButton!
+    var toggleButton: NSButton!
     var urlField: NSTextField!
     var submitButton: NSButton!
     var buttonPanel: NSView!
@@ -23,7 +26,7 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
     init() {
         let mainPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 800, height: 400),
-                            styleMask: [.titled, .resizable, .closable, .nonactivatingPanel],
+                            styleMask: [.titled, .resizable, .closable, .nonactivatingPanel, .miniaturizable],
                             backing: .buffered,
                             defer: false)
         mainPanel.level = .floating
@@ -37,6 +40,9 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         super.init(window: mainPanel)
 
         setupUI()
+        restorePanelState()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(windowDidResize(_:)), name: NSWindow.didResizeNotification, object: window)
     }
 
     required init?(coder: NSCoder) {
@@ -107,6 +113,16 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         splitView.addArrangedSubview(leftView)
         splitView.addArrangedSubview(rightView)
+        
+        toggleButton = NSButton(title: Constants.UI.Buttons.toggleCollapse, target: self, action: #selector(toggleLeftPanel))
+        toggleButton.toolTip = Constants.UI.Tooltips.toggleCollapse
+        toggleButton.bezelStyle = .inline
+        toggleButton.isBordered = false
+        toggleButton.frame = NSRect(x: 0, y: 0, width: 20, height: 20)
+        toggleButton.wantsLayer = true
+        toggleButton.layer?.zPosition = 1000
+        contentView.addSubview(toggleButton)
+        updateToggleButtonPosition()
     }
 
     func splitView(_ splitView: NSSplitView, resizeSubviewsWithOldSize oldSize: NSSize) {
@@ -114,10 +130,11 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         let totalWidth = splitView.bounds.width
 
         let leftWidth = splitView.subviews[0].frame.width
-        var newLeftWidth = max(historyPanelWidth, leftWidth)
+        let minWidth = isLeftPanelCollapsed ? collapsedPanelWidth : historyPanelWidth
+        var newLeftWidth = max(minWidth, leftWidth)
 
-        if oldSize.width > totalWidth && leftWidth < historyPanelWidth {
-            newLeftWidth = historyPanelWidth
+        if oldSize.width > totalWidth && leftWidth < minWidth {
+            newLeftWidth = minWidth
         }
 
         newLeftWidth = min(newLeftWidth, totalWidth - dividerThickness - 100)
@@ -125,6 +142,11 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
         splitView.subviews[0].frame = NSRect(x: 0, y: 0, width: newLeftWidth, height: splitView.bounds.height)
         splitView.subviews[1].frame = NSRect(x: newLeftWidth + dividerThickness, y: 0, width: newRightWidth, height: splitView.bounds.height)
+
+    }
+
+    func splitViewDidResizeSubviews(_ notification: Notification) {
+        updateToggleButtonPosition()
     }
 
     func saveWindowFrame() {
@@ -139,7 +161,6 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
             "height": frame.size.height
         ]
         UserDefaults.standard.set(frameDict, forKey: Constants.UserDefaultsKeys.windowFrame)
-        print("✅ Saved window frame: \(frame)")
     }
 
     func restoreWindowFrame() {
@@ -149,20 +170,17 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         }
 
         guard let x = frameDict["x"],
-              let y = frameDict["y"],
-              let width = frameDict["width"],
-              let height = frameDict["height"] else {
+            let y = frameDict["y"],
+            let width = frameDict["width"],
+            let height = frameDict["height"] else {
             print("❌ Invalid frame dictionary: \(frameDict)")
             return
         }
 
         let frame = NSRect(x: x, y: y, width: width, height: height)
-        print("📐 Attempting to restore frame: \(frame)")
-
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(frame.origin) }),
            screen.frame.intersects(frame) {
             window?.setFrame(frame, display: true, animate: false)
-            print("✅ Restored window frame: \(frame)")
         } else {
             print("⚠️ Saved frame is off-screen or invalid, using default")
         }
@@ -211,7 +229,7 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
 
     private func restoreSplitViewContent() {
         guard let contentView = window?.contentView,
-              let storedSplitView = storedSplitView else { return }
+            let storedSplitView = storedSplitView else { return }
 
         playerController.view.removeFromSuperview()
         contentView.addSubview(storedSplitView)
@@ -317,5 +335,69 @@ class AppWindowController: NSWindowController, NSSplitViewDelegate {
         }
 
         (NSApp.delegate as? AppDelegate)?.removeFromHistory(at: selectedRow)
+    }
+
+    @objc func toggleLeftPanel() {
+        isLeftPanelCollapsed.toggle()
+
+        toggleButton.title = isLeftPanelCollapsed ? Constants.UI.Buttons.toggleExpand : Constants.UI.Buttons.toggleCollapse
+        toggleButton.toolTip = isLeftPanelCollapsed ? Constants.UI.Tooltips.toggleExpand : Constants.UI.Tooltips.toggleCollapse
+
+        UserDefaults.standard.set(isLeftPanelCollapsed, forKey: Constants.UserDefaultsKeys.leftPanelCollapsed)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+            if isLeftPanelCollapsed {
+                splitView.setPosition(0, ofDividerAt: 0)
+            } else {
+                splitView.setPosition(historyPanelWidth, ofDividerAt: 0)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.updateToggleButtonPosition()
+        }
+    }
+
+    private func updateToggleButtonPosition() {
+        guard let contentView = window?.contentView else { return }
+
+        let leftPanel = splitView.arrangedSubviews[0]
+        let leftPanelFrame = leftPanel.frame
+
+        let dividerX = leftPanelFrame.maxX + splitView.dividerThickness / 2
+        let centerY = contentView.bounds.midY
+
+        toggleButton.frame = NSRect(
+            x: dividerX - 10,
+            y: centerY - 10,
+            width: 20,
+            height: 20
+        )
+    }
+
+    func restorePanelState() {
+        isLeftPanelCollapsed = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.leftPanelCollapsed)
+
+        DispatchQueue.main.async {
+            let targetWidth = self.isLeftPanelCollapsed ? 0 : self.historyPanelWidth
+            self.splitView.setPosition(targetWidth, ofDividerAt: 0)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.toggleButton.title = self.isLeftPanelCollapsed ? Constants.UI.Buttons.toggleExpand : Constants.UI.Buttons.toggleCollapse
+                self.toggleButton.toolTip = self.isLeftPanelCollapsed ? Constants.UI.Tooltips.toggleExpand : Constants.UI.Tooltips.toggleCollapse
+                self.updateToggleButtonPosition()
+            }
+        }
+    }
+
+    @objc private func windowDidResize(_ notification: Notification) {
+        updateToggleButtonPosition()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
